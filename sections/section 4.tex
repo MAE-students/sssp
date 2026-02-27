@@ -1,0 +1,1262 @@
+\section{Wave Digital Systems}
+
+\subsection{Introduction}
+
+In physical modelling, a system's behaviour is typically described by a set of \textit{constitutive equations}, which may include ordinary or partial differential equations (ODEs or PDEs).
+These equations relate \textit{extensive variables} (i.e. pressure, flow rate, voltage, force) with \textit{intensive variables} (i.e. velocity, current), capturing how energy is stored, transformed or transmitted in the system.
+Additionally, \textit{continuity constraints} - such as Kirchhoff's laws or conservation principles - govern the interaction between different system components.
+
+To move from continuous formulations to simulation-ready models, we often employ a method called \textbf{lumpification}, which discretizes the system into \textit{modular blocks}.
+Each block behaves like a \textit{black box} with defined input and output ports, similar to elements in an electric circuit.
+
+
+In analog circuits, interactions between these components are governed by sets of equations that must be numerically solved. Simulation tools such as SPICE are designed to handle this. However, converting these physical laws into stable and efficient signal-processing structures remains a central challenge.
+
+\subsection{Digital Waveguide Theory}
+
+The foundational idea of signal flow can be traced back to \textbf{Digital Waveguide (DWG)} theory. This theory emerges naturally from the solution of the \textbf{1D D'Alembert wave equation}:
+\[
+\ddot{v}(x,t) = c^2 v''(x,t) \quad \Rightarrow \quad v(x,t) = \underbrace{v_r(ct - x)}_{\text{forward wave}} + \underbrace{v_l(ct + x)}_{\text{backward wave}}
+\]
+
+The signal \( v(x,t) \) is thus composed of two \textbf{travelling waves} moving in opposite directions. These can be derived from linear combinations of the \textbf{Kirchhoff variables} - voltage \( v \) and current \( i \) - through the transformation:
+\[
+\begin{pmatrix} v_r \\ v_l \end{pmatrix} = \frac{1}{2} \begin{bmatrix} 1 & Z_0 \\ 1 & -Z_0 \end{bmatrix} \begin{pmatrix} v \\ i \end{pmatrix}
+\quad \Rightarrow \quad
+\begin{pmatrix} v \\ i \end{pmatrix} = \begin{bmatrix} 1 & 1 \\ 1/Z_0 & -1/Z_0 \end{bmatrix} \begin{pmatrix} v_r \\ v_l \end{pmatrix}
+\]
+
+Where \( Z_0 \) is the \textbf{characteristic impedance} of the medium.
+Upon discretization, these become the wave variables \( v^+ \) and \( v^- \), representing incident and reflected waves:
+\[
+\begin{pmatrix} v_r \\ v_l \end{pmatrix} \longrightarrow \begin{pmatrix} v^+ \\ v^- \end{pmatrix}
+\]
+
+
+In DWG networks, the system is represented as a network of \textbf{delay lines} and \textbf{scattering junctions}.
+Scattering occurs when the characteristic \textbf{impedance changes} and describes the partial \textbf{reflection} and \textbf{transmission} of the wave in those discontinuity points.  
+Scattering is modelled using \textbf{Kelly-Lochbaum junctions}, which calculate how much of the wave is reflected and how much is transmitted.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{sdsddsdddd.png}
+    \caption{Example of WGN modelling a 2D mesh}
+\end{figure}
+
+Discontinuities in the characteristic impedance cause scattering, which is implemented as a 2-input 2-output block called Kelly-Lochbaum scattering cell. Interconnections btw multiple delay lines are modeled as multi-port junctions, which implement continuity equations
+(Kirchhoff laws) using a scattering matrix that depends on the characteristic impedances of the physical media that are connected together
+
+Junctions have a twofold function: enforcing continuity equations and implementing changes of the «reference frames» for the wave variables. When building networks of delay lines the resulting signal flow is guaranteed to be computable (no loops without delay elements)
+because the scattering junctions are always connected together
+through at least one delay element. Delay elements express both temporal delay and spatial shifts, therefore their presence is guaranteed by the distributed-parameter nature of the
+physical model.
+
+Can we generalize this approach to define a computable signal flow in lumped-parameter model?While in principle we can use similar definitions for waves in a circuit, we can no longer assume that scattering cell be separated from each other by a delay element (there is no spatial propagation), therefore computability problems arise. Unless we resort to other tricks, the signal flow that we construct through K2W mappings, will not be computable!
+
+%The scattering matrices are carefully designed to ensure two critical properties:
+%\begin{itemize}
+%    \item \textbf{Stability}: ensures energy does not artificially accumulate in the system;
+%    \item \textbf{Computability}: avoids algebraic loops and guarantees causality by maintaining delay elements.
+%\end{itemize}
+
+%This framework can also be extended to simulate lumped systems (i.e. mass-spring networks), offering a powerful bridge between wave-based and circuit-based representations.
+
+
+\subsection{Wave Digital Filters}
+
+\textbf{Wave Digital Filters (WDFs)} are the \textbf{lumped version} of Digital Waveguides (DWGs).  
+They were originally created to \textit{convert analog filters} into \textit{digital form}.  
+WDFs provide a clear structure for modelling physical systems by connecting blocks one-by-one through specific ports.
+
+The process starts with a \textbf{reference electrical circuit}.  
+For each connection point (\textbf{port}), we define a simple \textbf{K2W mapping}: it converts the original circuit (\textbf{Kirchhoff}) variables into input-output \textbf{wave variables}.  
+In this context, the parameter \( Z_0 \) is not a fixed impedance but a \textbf{free parameter} that can be adjusted (with the notation of $R$).  \( Z_0 \)  can no longer to be interpreted as a characteristic impedance since there is no propagation in the model.
+This parameter is like a \textit{token} that helps manage the flow of signals between ports.  
+
+After applying K2W mappings to all varaibles and discretizing the individual blocks, we transform the original constitutive equations into \textbf{input-output topological relationships}.  
+Connections like \textit{series} and \textit{parallel} are now treated as \textit{junctions} (or scattering cells).  
+
+Initially, the structure may contain feedback loops without delays, making the system \textbf{non-computable}.  
+However, strategically assigning \( N \) free parameters (one for each port), these feedback loops can be adjusted to include \textbf{delays}, ensuring the system is computable.
+
+\subsubsection{Wave Variables}
+
+Let us consider an arbitrary circuit port described by the \textbf{Kirchhoff pair} \( (v, i) \): we apply the K2W mapping to convert these variables into \textbf{wave components} \( v^+ \) and \( v^- \), representing the \textit{incident} and \textit{reflected} waves respectively.  
+The transformation (and inverse transformation) are defined as:
+\[
+\begin{pmatrix} v^+ \\ v^- \end{pmatrix} = \frac{1}{2} 
+\begin{bmatrix} 1 & R \\ 1 & -R \end{bmatrix} 
+\begin{pmatrix} v \\ i \end{pmatrix}, \qquad
+\begin{pmatrix} v \\ i \end{pmatrix} = 
+\begin{bmatrix} 1 & 1 \\ 1/R & -1/R \end{bmatrix} 
+\begin{pmatrix} v^+ \\ v^- \end{pmatrix}
+\]
+
+The term \( R \) is a free parameter known as the \textbf{reference resistance}.
+We can choose it strategically to adjust the signal flow and manage feedback loops. 
+
+We can interpret the K2W mapping as a \textbf{parametric change of reference frame}: the circuit is analysed in terms of wave components rather than voltage and current.
+This approach simplifies the handling of scattering and feedback within the network.
+The axes $v^+$ and $v^-$ can be defined as:
+\[
+v^+ \ \text{axis}: \quad \{ (v, i) : v^- = 0 \} = \{ (v, i) : v = Ri \}
+\qquad
+v^- \ \text{axis}: \quad \{ (v, i) : v^+ = 0 \} = \{ (v, i) : v = -Ri \}
+\]
+
+This visualization helps us interpreting the mapping as a \textit{rotation} in the $(v, i)$ plane, allowing for a clear distinction between incident and reflected wave components. From the graph we below, we observe that $R$ is the slope of the rotation done in the original $(v,i)$ plane.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{rhutkil.png}
+    \caption{K2W mapping as change of reference}
+\end{figure}
+
+\subsubsection{Resistor in the Wave Domain}
+
+A \textbf{resistor} is described by the resistance $R_0$, which relates voltage $v$ and current $i$.
+In the wave domain, this relationship is expressed applying the K2W mapping to the constitutive equation:
+\[
+v = R_0 i \quad \Rightarrow \quad v^+ + v^- = R_0 \frac{v^+ - v^-}{R}
+\]
+
+Rearranging the terms, we obtain the \textbf{reflection coefficient} \( k \):
+\[
+v^- = k v^+, \qquad k=\frac{v^-}{v^+}, \qquad k = \frac{R_0 - R}{R_0 + R}
+\]  
+
+The reflection coefficient \( k \) quantifies how much of the incident wave is reflected at the port.
+The term \( R_0 \) is the actual \textbf{impedance} of the resistor (physical component), while \( R \) is the \textbf{reference resistance}, a free parameter that we can assign strategically to control reflections.
+
+For example, we can choose to match reference resistance and resistor impedance, so that no wave is reflected:
+\[
+R = R_0 \quad \Rightarrow \quad k = 0
+\]
+
+Therefore, the resistor can be \textbf{perfectly matched} in the wave domain, removing reflections at that port.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{rg.png}
+    \includegraphics[width=0.16\linewidth]{dfddf.png}
+    \caption{Resistor in electric (left) and wave domain (right)}
+\end{figure}
+
+\subsubsection{Generic Impedances in the Wave Domain}
+
+\textbf{A generic impedance} $Z(s)$ can be described by an ordinary differential equation (ODE), which in the Laplace domain becomes:
+\[ V(s) = Z(s) I(s) \]
+
+We apply the K2W mapping on the constitutive equation to define the wave variables $V^+$ and $V^-$:
+\[ V(s) = Z(s) I(s) \quad \Rightarrow \quad V^+(s) + V^-(s) = Z(s) \frac{V^+(s) - V^-(s)}{R} \]
+
+Rearranging the terms, we obtain the \textbf{reflection coefficient} $K(s)$:
+\[ V^-(s) = K(s) V^+(s), \qquad K(s) = \frac{Z(s) - R}{Z(s) + R} \]
+
+The reflection coefficient \( K(s) \) in continuous domain can be \textbf{converted to the discrete domain} as \( K_d(z) \), allowing digital processing implementation.
+We assume $K_d(z)$ casual and $k_d(n)$ the corresponding impulse response: we want to remove the \textbf{instantaneous input-output dependency} of the reflection filter - which means $k_d(0)=0$.
+In order to achieve that, we choose $R=z_d(0)$, where $z_d(n)$ is the impulse response associated to $Z_d(s)$, which is the discretization of $Z(s)$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.22\linewidth]{imp1.png}
+    \includegraphics[width=0.18\linewidth]{imp2.png}
+    \includegraphics[width=0.2\linewidth]{imp3.png}
+    \caption{Impedance in electrical domain (left), in continuous wave domain (center) and in discrete wave domain (right)}
+\end{figure}
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Understanding the Reference Resistance \( R \) and Impedance \( Z(s) \)}]
+
+\( R \) is a \textbf{reference parameter}, not the actual resistance $R_0$.
+It is chosen to control wave reflections in the K2W mapping.  
+
+\( Z(s) \) is the \textbf{actual impedance} of the component, expressed in the Laplace domain.
+It varies with frequency and can be defined as:
+\[
+Z(s) = R_0 \quad \text{(Resistor)}, \quad Z(s) = sL \quad \text{(Inductor)}, \quad Z(s) = \frac{1}{sC} \quad \text{(Capacitor)}
+\]
+\end{tcolorbox}
+
+\subsubsection{Capacitor in the Wave Domain}
+
+The constitutive equation of a \textbf{capacitor} is given by the following ODE (and corresponding equation in Laplace domain):
+\[
+v = \frac{q}{C} \quad \Rightarrow \quad \dot{v} = \frac{\dot{q}}{C} = \frac{{i}}{C}  \quad \overset{\mathscr{L\{\cdot\}}}{\longrightarrow} \quad sV(s) = \frac{1}{C} I(s)
+\]
+
+In the Laplace domain, the impedance $Z(s)$ of the capacitor and the reflection coefficient $K(s)$ are:
+\[
+Z(s) = \frac{1}{sC} \quad \Rightarrow \quad K(s) = \frac{Z(s) - R}{Z(s) + R} = \frac{\frac{1}{sC} - R}{\frac{1}{sC} + R}
+\]
+
+We obtain the discretized reflection coefficient $K_d(z)$ using the following bilinear form:
+\[
+s = \frac{2}{T_s} \frac{1 - z^{-1}}{1 + z^{-1}} \quad \Rightarrow \quad K_d(z) = \frac{p + z^{-1}}{1 + p z^{-1}}, \qquad p = \frac{T_s - 2RC}{T_s + 2RC} = \frac{T_s - 2\tau}{T_s + 2\tau}, \qquad \tau = RC
+\]
+
+We obtain an \textbf{allpass filter} structure, which creates a direct input-output connection, leading to an \textbf{instantaneous response}.
+To avoid this and ensure \textbf{causality}, we set the free parameter \( R \) so that:
+\[
+p = 0 \quad \Rightarrow \quad
+T_s - 2\tau = 0 \quad \Rightarrow \quad T_s = 2RC \quad \Rightarrow \quad R = \frac{T_s}{2C} \quad \Rightarrow \quad K_d(z) = z^{-1}
+\]
+
+This introduces a delay, preventing direct input-output dependency: the resulting structure is now a \textbf{pure delay}, effectively removing the instantaneous connection.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{sdsdadadv.png}
+    \includegraphics[width=0.17\linewidth]{gdfgdfjh.png}
+    \includegraphics[width=0.17\linewidth]{yjhbfg.png}
+    \caption{Capacitor in electrical domain (left), discrete reflection coefficient (center) and pure delay in wave variables (right)}
+\end{figure}
+
+\subsubsection{Inductor in the Wave Domain}
+
+The constitutive equation of an \textbf{inductor} is given by the following ODE (and corresponding equation in Laplace domain):
+\[ v = L \frac{\partial i}{\partial t} \quad \overset{\mathscr{L\{\cdot\}}}{\longrightarrow} \quad V(s) = sL \cdot I(s) \]
+
+In the Laplace domain, the impedance $Z(s)$ of the inductor and the reflection coefficient $K(s)$ are:
+\[
+Z(s) = sL \quad \Rightarrow \quad K(s) = \frac{Z(s) - R}{Z(s) + R} = \frac{sL - R}{sL + R}
+\]
+
+We obtain the discretized reflection coefficient $K_d(z)$ using the following bilinear form:
+\[
+s = \frac{2}{T_s} \frac{1 - z^{-1}}{1 + z^{-1}} \quad \Rightarrow \quad K_d(z) = \frac{p - z^{-1}}{1 - p z^{-1}}, \qquad p = \frac{2L / R - T_s}{2L / R + T_s} = \frac{2\tau - T_s}{2\tau + T_s}, \quad \tau = \frac{L}{R}
+\]
+
+As with the capacitor, we obtain an \textbf{allpass filter} structure, which introduces an \textbf{instantaneous input-output connection}.
+To avoid this and ensure \textbf{causality}, we set the free parameter $R$ so that:
+\[p = 0 \quad \Rightarrow \quad T_s - 2\tau = 0 \quad \Rightarrow \quad T_s = 2\frac{L}{R} \quad \Rightarrow \quad R = \frac{2L}{T_s} \quad \Rightarrow \quad K_d(z) = -z^{-1} \]
+
+The resulting structure is now a \textbf{pure delay}, effectively removing the instantaneous connection.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{lolil.png}
+    \includegraphics[width=0.17\linewidth]{fsfsfdhf.png}
+    \includegraphics[width=0.17\linewidth]{jkhg.png}
+    \caption{Inductor in electrical domain (left), discrete reflection coefficient (center) and as a delay in wave variables (right)}
+\end{figure}
+
+\subsubsection{Voltage Generator in the Wave Domain}
+
+A \textbf{voltage generator} can be described by the following wave domain equations:
+\[ v^+ = \frac{1}{2}(v + Ri) = \frac{1}{2}(v_g + R_g i + Ri) \qquad v^- = \frac{1}{2}(v - Ri) = \frac{1}{2}(v_g + R_g i - Ri) \]
+
+As usual, we need to set the free parameter $R$.
+For \textbf{adaptation}, we set $R = R_g$, leading to the adapted form:
+\[ v^+ = \frac{1}{2} v_g + \frac{1}{2} (R_g + R)i = \frac{1}{2} v_g + R_g i \qquad v^- = \frac{1}{2} v_g + \frac{1}{2} \left(\cancel{R_g - R}\right)i = \frac{1}{2} v_g \]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.17\linewidth]{adadad.png}
+    \includegraphics[width=0.2\linewidth]{dgv.png}
+    \caption{Voltage generator in electrical (left) and wave domain (right)}
+\end{figure}
+
+We summarize the 1-port characteristics below:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Type of element} & \textbf{Constitutive Eq.} & \textbf{Reflection Coefficient} & \textbf{Adaption Requirement} & \textbf{Adapted Form} \\ 
+\midrule
+Resistor                  & $v(t) = R\ i(t)$                          & $K_d(z) = k = \frac{R_0 - R}{R_0 + R}$              & $R=R_0$ & $K_d(z) = 0$               \\
+Capacitor                 & $i(t) = C\ \frac{d v(t)}{dt}$             & $K_d(z) = \frac{p+z^{-1}}{1+pz^{-1}}, \ p=\frac{T_s-2RC}{T_s+2RC}$         & $R=T_s/2C$ & $K_d(z) = z^{-1}$  \\ 
+Inductor                  & $v(t) = L\ \frac{d i(t)}{dt}$             & $K_d(z) = \frac{p-z^{-1}}{1-pz^{-1}}, \ p=\frac{2L/R-T_s}{2L/R+T_s}$      & $R=2L/T_s$ & $K_d(z) = -z^{-1}$  \\ 
+\bottomrule
+\end{tabular}
+\caption{Wave mappings of common WD linear one-port elements}
+\end{table}
+
+
+% \begin{figure}[H]
+%   \centering
+%   % Resistor row
+%   \begin{subfigure}[b]{0.2\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{rg.png}
+%     \caption{Analog model of the resistor}
+%     \label{fig:resistor_analog}
+%   \end{subfigure}\hfill
+%   \begin{subfigure}[b]{0.2\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{dfddf.png}
+%     \caption{WDF model of the resistor}
+%     \label{fig:resistor_wdf}
+%   \end{subfigure}
+
+%   \bigskip
+
+%   % Capacitor row
+%   \begin{subfigure}[b]{0.2\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{sdsdadadv.png}
+%     \caption{Analog model of the capacitor}
+%     \label{fig:cap_analog}
+%   \end{subfigure}\hfill
+%   \begin{subfigure}[b]{0.2\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{gdfgdfjh.png}
+%     \caption{WDF model of the capacitor}
+%     \label{fig:cap_wdf}
+%   \end{subfigure}\hfill
+%   \begin{subfigure}[b]{0.20\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{yjhbfg.png}
+%     \caption{Adaptation case of the capacitor}
+%     \label{fig:cap_adapt}
+%   \end{subfigure}
+
+%   \bigskip
+
+%   % Inductor row
+%   \begin{subfigure}[b]{0.20\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{lolil.png}
+%     \caption{Analog model of the inductor}
+%     \label{fig:ind_analog}
+%   \end{subfigure}\hfill
+%   \begin{subfigure}[b]{0.20\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{fsfsfdhf.png}
+%     \caption{WDF model of the inductor}
+%     \label{fig:ind_wdf}
+%   \end{subfigure}\hfill
+%   \begin{subfigure}[b]{0.20\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{jkhg.png}
+%     \caption{Adaptation case of the inductor}
+%     \label{fig:ind_adapt}
+%   \end{subfigure}
+
+%   \caption{Analog, Wave-digital  and adapted case models of simple linear one-port elements.}
+%   \label{fig:wd_one_port_models}
+% \end{figure}
+
+\subsubsection{Connecting Two Bipoles}
+
+Let us consider an example of \textbf{connection} between two \textbf{bipoles}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{fgdfg.png}
+    \caption{Example of interconnection between two bipoles}
+\end{figure}
+
+We define the following wave variables for the capacitor, along with its constitutive equation:
+\[ v_1^+ = \frac{1}{2}(v_1 + Ri_1) = \frac{1}{2}(v_1 + Ri_2), \quad v_1^- = \frac{1}{2}(v_1 - Ri_1) = \frac{1}{2}(v_1 - Ri_2), \qquad v_1 = \frac{1}{sC} i_1 \]
+
+We define the following wave variables for the resistor, along with its constitutive equation:
+\[ v_2^+ = \frac{1}{2}(v_2 + Ri_2), \quad v_2^- = \frac{1}{2}(v_2 - Ri_2), \qquad v_2 = R_1 i_2 \]
+
+The circuit topology gives us the following continuity conditions (elements in series):
+\[
+v_2^- = v_1^+, \quad v_1^- = v_2^+, \quad i_1 = i_2
+\]
+
+We remind the definition of reflection coefficient $k$ and we analyse two cases when we setup $R$:
+\[
+k = \frac{v_2^-}{v_2^+} = \frac{v_1^-}{v_1^+} \quad
+\begin{cases}
+R = \frac{T_s}{2C} \quad \Rightarrow \quad  p = 0, \quad k = \frac{R_1 - \frac{T_s}{2C}}{R_1 + \frac{T_s}{2C}} \qquad \text{total reflection} \\
+R = R_1 \quad \Rightarrow \quad p = \frac{R_1 - \frac{T_s}{2C}}{R_1 + \frac{T_s}{2C}}, \quad k = 0 \qquad \text{total transmission}
+\end{cases}
+\]
+
+This example shows that it is not possible to connect two 1-port elements directly and make them both reflection-free.
+
+\subsection{Linking Blocks}
+
+We defined how to represent \textbf{elementary blocks} in the wave domain and how to \textbf{choose} the wave parameter \( R \) to make a block \textbf{reflection-free}, preventing instantaneous reflections (\textbf{adaption}).  
+
+Reflection-free blocks can connect to ports that generate reflections without causing \textbf{computational issues}.  
+However, blocks that exhibit reflections can only connect to reflection-free ports to avoid \textbf{feedback loops} and \textbf{instability}.  
+While this approach works well for connecting two blocks, it becomes more complex when \textbf{connecting multiple blocks simultaneously}, creating challenges in managing wave interactions.
+
+Junctions in DWGs are meant to implement topological interconnections (series or
+parallel) between different pairs of digital waves, but we cannot connect junctions
+together due to computability problems.\textbf{Adaptors} are special types of Junctions that exhibit one «adapted port», so that they can be connected with each other and form circuits
+
+Adaptors (as Junctions) have two fundamental properties:
+\begin{itemize}
+  \item \textbf{Reference‐Impedance Transformation:} they implement a controlled change of wave impedance, ensuring that power is conserved and no unphysical energy is generated.
+  \item \textbf{Computability Guarantee:} they introduce just the right amount of delay (or reinterpret algebraic loops) so that the overall network remains strictly causal and free of instantaneous loops.
+\end{itemize}
+
+When sketching a circuit, we start from the full multi-port scattering matrices of ideal series and parallel junctions in a DWG.
+By imposing adaptation conditions - essentially matching reference impedances at each port - one reduces each multi-port relation to a 2-port adaptor scattering matrix.
+These adaptors can then be cascaded arbitrarily, yielding stable, real‐time implementable WDF structures.
+
+
+\subsubsection{Series Junction}
+
+A \textbf{series junction} represents a configuration where multiple ports converge at a common point, enforcing the continuity of current and the sum of voltages across the ports to zero:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{series junction.png}
+    \caption{Analog scheme of a series junction}
+\end{figure}
+
+Each port $k = \{1,2,3\}$ is described by the wave variables $v_k^+$ and $v_k^-$:
+\[
+v_k^+ = \frac{1}{2}(v_k + R_k i_k),
+\qquad
+v_k^- = \frac{1}{2}(v_k - R_k i_k)
+\]
+
+The \textbf{continuity equations} of the series junction make sure that the sum of port voltages is zero and that the port currents are the same:
+\[
+v_1 + v_2 + v_3 = (v_1^+ + v_1^-) + (v_2^+ + v_2^-) + (v_3^+ + v_3^-) = 0, \qquad i_1 = i_2 = i_3 \Rightarrow \frac{v_1^+ - v_1^-}{R_1} = \frac{v_2^+ - v_2^-}{R_2} = \frac{v_3^+ - v_3^-}{R_3}
+\]
+
+The relation between outgoing wave variables $v^-$ and ingoing waves $v^+$ gives us a \textbf{scattering matrix formulation}:
+\[
+\begin{pmatrix}
+v_1^- \\ 
+v_2^- \\ 
+v_3^- 
+\end{pmatrix} = 
+\underbrace{
+\left\{
+\begin{bmatrix} 
+1 & 0 & 0 \\ 
+0 & 1 & 0 \\ 
+0 & 0 & 1 
+\end{bmatrix} - 
+\begin{bmatrix}
+\alpha_1 & \alpha_1 & \alpha_1 \\ 
+\alpha_2 & \alpha_2 & \alpha_2 \\ 
+\alpha_3 & \alpha_3 & \alpha_3 
+\end{bmatrix}
+\right\}
+}_{\text{Scattering matrix}}
+\begin{pmatrix}
+v_1^+ \\ 
+v_2^+ \\ 
+v_3^+ 
+\end{pmatrix},
+\qquad \alpha_i = \frac{2R_i}{R_1 + R_2 + R_3}, \qquad i = 1, 2, 3
+\]
+
+The reflection coefficients are given by $1-\alpha_i$.
+The three ports are not independent, considering that $\alpha_1 + \alpha_2 + \alpha_3 = 2$.
+The series junction outgoing voltages $v^-$ are:
+\[
+v_0^+ = v_1^+ + v_2^+ + v_3^+, \qquad
+\begin{cases}
+v_1^- = v_1^+ -\alpha_1 v_0^+ \\
+v_2^- = v_2^+ -\alpha_2 v_0^+ \\
+v_3^- =  v_3^+ -\alpha_3 v_0^+
+\end{cases}
+\quad \Rightarrow \quad
+\begin{cases}
+v_1^- = v_1^+ -\alpha_1 v_0^+ \\
+v_2^- = v_2^+ -\alpha_2 v_0^+ \\
+v_3^- =  - (v_0^+ + v_1^- + v_2^-)
+\end{cases}
+\]
+
+Beware that \textbf{all ports exhibit a local instantaneous reflection}:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.33\linewidth]{series_junction_symbol.png}
+    \includegraphics[width=0.33\linewidth]{series adaptor.png}
+    \caption{Generic series junction}
+\end{figure}
+
+\subsubsection{Series Adaptor}
+
+The three-port series junction can be interpreted as a multiport series junction similar to those described in the DWG approach for \( N = 3 \).
+In general, all ports will exhibit instantaneous reflection unless a specific constraint is imposed on the three reference port resistances.
+
+For example, to make port 3 \textbf{reflection-free}:
+\[
+1 - \alpha_3 = 0 \quad \Rightarrow \quad \alpha_3 = 1 \quad \Rightarrow \quad \alpha_1 + \alpha_2 = 1 \quad \Rightarrow \quad \alpha_2 = 1 - \alpha_1
+\]
+
+We remind the definition of $\alpha_3$:
+\[
+\alpha_3 = \frac{2R_3}{R_1 + R_2 + R_3} = 1 \quad \Rightarrow \quad 2R_3 = R_1 + R_2 + R_3 \quad \Rightarrow \quad R_3 = R_1 + R_2
+\]
+
+In a \textbf{series junction}, if we set the \textbf{resistance} of one port equal to the \textbf{sum of the resistances} of the other two ports, that port becomes \textbf{reflection-free} (or adapted).  
+This means that no signal is reflected back at that port, allowing for smooth signal transmission through the junction.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.33\linewidth]{sfsdsdsdsdsdsd.png}
+    \includegraphics[width=0.33\linewidth]{series adaptor 2.png}
+    \caption{Series adaptor (reflection-free) }
+\end{figure}
+\[
+\begin{bmatrix} v_1^- \\ v_2^- \\ v_3^- \end{bmatrix} =
+\begin{bmatrix}
+1-\alpha_1 & -\alpha_1 & -\alpha_1 \\
+-\alpha_2 & 1-\alpha_2 & -\alpha_2 \\
+-\alpha_3 & -\alpha_3 & 1-\alpha_3
+\end{bmatrix}
+\begin{bmatrix} v_1^+ \\ v_2^+ \\ v_3^+ \end{bmatrix}
+=
+\begin{bmatrix}
+1-\alpha_1 & -\alpha_1 & -\alpha_1 \\
+-1+\alpha_1 & \alpha_1 & -1+\alpha_1 \\
+-1 & -1 & 0
+\end{bmatrix}
+\begin{bmatrix} v_1^+ \\ v_2^+ \\ v_3^+ \end{bmatrix}
+\]
+
+\subsubsection{Parallel Junction}
+
+A \textbf{parallel junction} represents a configuration where multiple ports converge at a common point, enforcing the continuity of voltage and the sum of currents entering the ports to zero:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{par scheme.png}
+    \caption{Analog scheme of a parallel junction}
+\end{figure}
+
+The ports wave variables are:
+\[
+v_k^+ = \frac{1}{2}(v_k + R_k i_k), \qquad v_k^- = \frac{1}{2}(v_k - R_k i_k), \qquad G_k = \frac{1}{R_k}
+\]
+
+The \textbf{continuity equations} of the parallel junction make sure that the sum of port currents is zero and that the voltages across the ports are the same:
+\[
+i_1 + i_2 + i_3 = G_1 (v_1^+ - v_1^-) + G_2(v_2^+ - v_2^-) + G_3(v_3^+ - v_3^-) = 0, \qquad v_1 = v_2 = v_3  \Rightarrow v_1^+ + v_1^- = v_2^+ + v_2^- = v_3^+ + v_3^-
+\]
+
+The relation between outgoing wave variables $v^-$ and ingoing waves $v^+$ gives us a \textbf{scattering matrix formulation}:
+\[
+\begin{pmatrix}
+v_1^- \\ 
+v_2^- \\ 
+v_3^- 
+\end{pmatrix} = 
+\underbrace{
+\left\{
+\begin{bmatrix}
+\alpha_1 & \alpha_2 & \alpha_3 \\ 
+\alpha_1 & \alpha_2 & \alpha_3 \\ 
+\alpha_1 & \alpha_2 & \alpha_3 
+\end{bmatrix} -
+\begin{bmatrix} 
+1 & 0 & 0 \\ 
+0 & 1 & 0 \\ 
+0 & 0 & 1 
+\end{bmatrix}
+\right\}
+}_{\text{Scattering matrix}}
+\begin{pmatrix}
+v_1^+ \\ 
+v_2^+ \\ 
+v_3^+ 
+\end{pmatrix},
+\qquad \alpha_i = \frac{2G_i}{G_1 + G_2 + G_3}, \qquad i = 1, 2, 3
+\]
+
+The reflection coefficients are given by $\alpha_i-1$.
+As with the series junction, the three ports are not independent, considering that $\alpha_1 + \alpha_2 + \alpha_3 = 2$.
+The parallel junction outgoing voltages $v^-$ are:
+\[
+v_i^- = \sum\limits_{k=1}^{3}\alpha_kv_k^+ - v_i^+
+, \quad 
+\forall i \in [1,3]
+\quad \Rightarrow \quad
+\begin{cases}
+v_1^- = v_3^+ + (v_3^- - v_1^+) \\
+v_2^- = v_3^+ + (v_3^- - v_2^+) \\
+v_3^- = v_3^+ -\alpha_1 (v_3^+ - v_1^-) - \alpha_2 (v_3^+ - v_2^-)
+\end{cases}
+\]
+
+Beware that \textbf{all ports exhibit a local instantaneous reflection}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.33\linewidth]{dfsdvsvsagine.png}
+    \includegraphics[width=0.33\linewidth]{parallel junction.png}
+    \caption{Generic parallel junction}
+\end{figure}
+
+\subsubsection{Parallel Adaptor}
+
+The three-port parallel junction can be interpreted as a multiport parallel junction similar to those described in the DWG approach for \( N = 3 \).
+In general, all ports will exhibit instantaneous reflection unless a specific constraint is imposed on the three reference port resistances.
+
+For example, to make port 3 \textbf{reflection-free}:
+\[
+\alpha_3 - 1 = 0 
+\quad \Rightarrow \quad 
+\alpha_3 = 1, \qquad \qquad  \alpha_1 + \alpha_2 + \alpha_3 = 2
+\quad \Rightarrow \quad 
+\alpha_1 + \alpha_2 = 1 
+\quad \Rightarrow \quad 
+\alpha_2 = 1 - \alpha_1
+\]
+
+We remind the definition of $\alpha_3$:
+\[
+\alpha_3 = \frac{2G_3}{G_1 + G_2 + G_3} = 1 \quad \Rightarrow \quad 2G_3 = G_1 + G_2 + G_3 \quad \Rightarrow \quad G_3 = G_1 + G_2 \quad \text{parallel between $R_1$ and $R_2$}
+\]
+
+In a parallel junction, if we set the \textbf{resistance} of one port equal to the \textbf{parallel resistance} of the other two ports, that port becomes \textbf{reflection-free} (or adapted).  
+This means that no signal is reflected back at that port, allowing for smooth signal transmission through the junction.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.33\linewidth]{dfsdvsvsagine.png}
+    \includegraphics[width=0.33\linewidth]{parallel adaptor.png}
+    \caption{Parallel adaptor}
+\end{figure}
+
+\subsubsection{Modelling an Analog Circuit}
+
+We want now to apply the principles of \textbf{Wave Digital Filters} to model \textbf{analog circuits}.
+The first step is to reformulate the circuit to emphasize the \textbf{topological interconnections} of series and parallel \textbf{adaptors}.
+Reorganizing the structure in this way, we aim to identify key nodes and adaptors, simplifying the analysis and implementation of the WDF framework.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{sdsdsdyhnh.png}
+    \includegraphics[width=0.55\linewidth]{ghgjdcsjcs<djbkczdjbkdav.png}
+    \caption{Analog circuit (left) and two possible WDF implementations (right)}
+\end{figure}
+
+\begin{bmatrix} v_1^- \\ v_2^- \\ v_3^- \end{bmatrix} =
+\begin{bmatrix}
+\alpha_1 - 1 & \alpha_2 & \alpha_3 \\
+\alpha_1 & \alpha_2 - 1 & \alpha_3 \\
+\alpha_1 & \alpha_2 & \alpha_3 - 1
+\end{bmatrix}
+\begin{bmatrix} v_1^+ \\ v_2^+ \\ v_3^+ \end{bmatrix}
+=
+\begin{bmatrix}
+\alpha_1 - 1 & 1-\alpha_1 & 1 \\
+\alpha_1 & -\alpha_1 & 1 \\
+\alpha_1 & 1-\alpha_1 & 0
+\end{bmatrix}
+\begin{bmatrix} v_1^+ \\ v_2^+ \\ v_3^+ \end{bmatrix}
+
+\subsection{Modelling Non-linear Elements}
+
+The classical formulation of Wave Digital Filters (WDFs) is based on two main assumptions:
+\begin{itemize}
+    \item \textbf{Tree-like interconnections.} The network is assumed to have a tree structure, avoiding ambiguous multi-node connections and ensuring well-defined wave propagation.
+    \item \textbf{Linearity.} Circuits are considered linear, which guarantees computability and simplifies analysis. This assumption, however, can be relaxed through suitable extensions.
+\end{itemize}
+
+Over time, WDF theory has been expanded to include a broader class of systems:
+\begin{itemize}
+    \item \textbf{Additional elements:} transformers, nullors, gyrators, and other multiport components can be modeled within the WD framework (cf.\ Fettweis).
+    \item \textbf{Single nonlinearity:} one nonlinear element can be incorporated, provided that the remaining ports are adapted to remove delay-free loops. The adapted port then serves as the connection point for the nonlinear block.
+    \item \textbf{Generalizations:} research at Politecnico di Milano introduced extensions such as digital waves with memory, algebraic nonlinearities, bi-parametric and vector waves, integration with graph theory, and advanced numerical methods (e.g., SIM).
+\end{itemize}
+
+
+\textbf{Non-linear elements} in the WD domain can be described using algebraic I/O relationships between \textit{across} variables (voltage) and \textit{through} variables (current).
+The expression of a general framework of \textbf{$n$-port non-linear elements} is:
+\[
+F_k(v_1, \ldots, v_n; \ i_1, \ldots, i_n) = 0, \qquad k = 1, \ldots, n
+\]
+
+In the specific case of a \textbf{single-port element}, the function simplifies to:
+\[
+F(v, i) = 0
+\]
+
+Within this framework, a resistor can be characterized as either voltage-controlled or current-controlled, leading to two specific forms:
+\[
+i = i(v) \quad \text{(voltage-controlled)},
+\qquad
+v = v(i) \quad \text{(current-controlled)}
+\]
+
+Using the relation between Kirchhoff and wave variables in the non-linearity function $F$:
+\[
+F(v, i) = 0 \quad \Rightarrow \quad F \left(v^+ + v^-, \frac{v^+ - v^-}{R} \right) = f(v^+, v^-) = 0
+\]
+
+The objective is to express the \textbf{non-linear element} explicitly in the \textbf{wave digital domain} by determining the \textbf{condition} that allows to isolate a relationship between \( v^+ \) and \( v^- \).  
+Since the non-linear function cannot be handled using a simple linear equation, we need to find a transformation that allows us to express \( v^- \) as a function of \( v^+ \), obtaining a non-linear relationship like:
+\[
+v^- = g(v^+)
+\]
+
+This \textbf{transformation} is crucial because it allows to handle non-linearities in the wave digital domain.
+Instead of dealing directly with voltage and current, we work with the wave variables \( v^+ \) and \( v^- \), making the system compatible with the WDF framework.
+
+The \textbf{graphical method} consists in plotting the non-linearity $F$ in the $v-i$ plane and apply the necessary change of variables to switch from Kirchhoff to wave variables:
+\[
+v^+ \ \text{axis}: \quad \{ (v, i) : v^- = 0 \} = \{ (v, i) : v = Ri \}
+\qquad
+v^- \ \text{axis}: \quad \{ (v, i) : v^+ = 0 \} = \{ (v, i) : v = -Ri \}
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{fdfdfd.png}
+    \includegraphics[width=0.45\linewidth]{fdgdg.png}
+    \caption{Graphical method - K2W mapping}
+\end{figure}
+
+
+Different scenarios may occur:
+\begin{itemize}
+    \item \textbf{Explicit and single-valued case.} The nonlinear characteristic in the $(v,i)$ plane, once mapped to the $(v^+,v^-)$ plane, yields a well-defined function $v^- = g(v^+)$, ensuring a unique reflected wave for each incident wave. This case is directly computable.
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{graphmet1.png}
+    \caption{Graphical method - K2W mapping, explicit case}
+\end{figure}
+    \item \textbf{Multivalued case.} The mapping can be expressed in explicit form, but it is not single-valued: for a given $v^+$, more than one possible $v^-$ exists. This corresponds, for instance, to nonlinear devices with ``S-shaped'' characteristics, and requires branch selection or hysteresis modeling.
+        \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{graphmet2.png}
+    \caption{Graphical method - K2W mapping, multivalued case}
+\end{figure}
+    \item \textbf{Implicit case.} The nonlinear relation remains of the form $f(v^+,v^-)=0$, and cannot be algebraically rearranged into an explicit function $v^-=g(v^+)$. In this situation, iterative numerical methods (e.g., Newton--Raphson) must be used at each time step to compute the reflected wave.
+        \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{graphmet3.png}
+    \caption{Graphical method - K2W mapping, implicit case}
+\end{figure}
+\end{itemize}
+
+
+
+\subsubsection{Non-linear Capacitor in the Wave Digital Domain}
+
+The \textbf{non-linear capacitor} is defined by an algebraic relationship between \textit{across} variables \( v \) (voltage) and the integral of \textit{through} variables \( q \) (charge). The general non-linearity form is:
+\[
+F_k(v_1, \ldots, v_n; q_1, \ldots, q_n) = 0, \quad k = 1, \ldots, n
+\]
+
+In the \textbf{single-port} case, the function simplifies to:
+\[
+F(v, q) = 0
+\]
+
+Within this framework, a capacitor can be characterized as either current-controlled or voltage-controlled:
+\[
+q = q(v) \quad \text{(voltage-controlled)},
+\qquad
+v = v(q) \quad \text{(current-controlled)}
+\]
+
+For the voltage-controlled case, we can differentiate \( q(v) \) with respect to time to obtain the current \( i \):
+\[
+i = \dot{q} = \frac{\partial q}{\partial v} \cdot \frac{\partial v}{\partial t} = C(v) \dot{v}, \quad\text{where}\ C(v) = q'(v)
+\]
+However, in the wave digital (WD) domain, this formulation presents a challenge since a nonlinear operator and the Laplace transform \textit{cannot be interchanged directly}.  
+To address this, we \textbf{introduce two wave variables} \( u^+ \) and \( u^- \), allowing us to \textit{treat nonlinear capacitors with memory as if they were memoryless}.  
+This step can be seen as a form of \textbf{linearization}, where the original nonlinear relationship is reformulated to isolate the incident and reflected waves in a structure resembling a resistive element.
+\[
+u^+ = \frac{1}{2} \left(v + \frac{q}{C}\right), \quad u^- = \frac{1}{2} \left(v - \frac{q}{C}\right)
+\]
+The inverse transformation (in Kirchhoff variables) is given by:
+\[
+v = u^+ + u^-, \quad q = C (u^+ - u^-)
+\]
+%At this point, we effectively transform the nonlinear relationship into a structure where the incident and reflected waves can be treated independently. This transformation implicitly \textbf{linearizes the system} in the wave domain, allowing us to handle the capacitor as if it were a resistive element.
+The trasformation that maps \((v^+, v^-) \) into \((u^+, u^-) \) is called "acreoss" integration.
+
+
+%Here, the parameter \( R \) is introduced as a virtual characteristic impedance. This allows the wave variables \( u^+ \) and \( u^- \) to be expressed consistently in terms of both voltage and current, regardless of whether the component is resistive, capacitive, or inductive. 
+
+The nonlinear capacitor is now represented as a linear combination of wave variables, reducing the problem to finding an appropriate \textbf{signal-dependent reflection coefficient} in the wave domain. This coefficient encapsulates the nonlinearity while maintaining a formally linear structure in terms of \( u^+ \) and \( u^- \).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\linewidth]{zdzdv.png}
+    \caption{ WD mutator or WD integrator}
+    \label{fig:enter-label}
+\end{figure}
+
+%We can solve this problem using the \textit{"across" integration} that allows us to define a signal-dependent reflection coefficient, which adapts to the nonlinear behavior of the capacitor.
+
+The current \( i \), since it can also be expressed in terms of the wave variables directly and knowing that $
+u^+ + u^- = v^+ + v^-$(since $v = v^+ + v^-$), can now be written as:
+\[
+i = \frac{v^+ - v^-}{R} = \frac{u^+ - u^-}{R} 
+\]
+\[
+\dot{q} = C(\dot{u}^+ - \dot{u}^-) \rightarrow
+\frac{v^+ - v^-}{R} = C(\dot{u}^+ - \dot{u}^-)
+\]
+Applying the Laplace transform, we define the time constant as: $ \tau = RC$.
+The transformed equations become:
+\[ \ -V^- + U^+ = V^+ - U^- \]
+\[V^- + \tau s U^+ = V^+ + \tau s U^- \]
+Now, we want to isolate \( V^- \) and \( U^+ \) in terms of \( V^+ \) and \( U^- \).
+Starting with the last equation we can rewrite it as:
+\[
+V^- = \frac{1 - \tau s}{1 + \tau s} V^+ + \frac{2 \tau s}{1 + \tau s} U^-
+\]
+Now isolating \( U^+ \) and rearranging the equation:
+\[
+U^+ = \frac{2}{1 + \tau s} V^+ - \frac{1 - \tau s}{1 + \tau s} U^-
+\]
+Finally we can derive the reflection coefficient \( H(s) \) as:
+\[ H(s) = \frac{1 - \tau s}{1 + \tau s} \]
+\[ 1 + H(s) = \frac{2}{1 + \tau s} \]
+\[ 1 - H(s) = \frac{2 \tau s}{1 + \tau s} \]
+Combining these, the wave equations are expressed as:
+\[ V^- = H(s) V^+ + (1 - H(s)) U^- \qquad U^+ = (1 + H(s)) V^+ - H(s) U^- \]
+To transition to the discrete domain, we apply the bilinear transformation \( s \to \frac{2}{T} \cdot \frac{1 - z^{-1}}{1 + z^{-1}} \), leading to the discrete transfer function:
+\[ \overline{H}(z) = H(s) \bigg|_{s = \frac{2}{T} \cdot \frac{1 - z^{-1}}{1 + z^{-1}}} = \frac{p + z^{-1}}{1 + p z^{-1}},
+\qquad p = \frac{T - 2\tau}{T + 2\tau} \]
+
+\textit{At this stage, the NL capacitor in the WD domain is effectively treated as a scattering cell with a reflection coefficient ($H(s)$) equivalent to an all-pass filter. In order to avoid computability problem, we thus have to chose R in relation to C in such a way to obtain \(p = 0\), otherwise the output of the filter depends instantaneously on its input.}
+
+The parameter \( p \) provides information about how much the sampling period \( T \) deviates from \( 2\tau \). Since \(p = 0\), to achieve \( 2\tau = T \), we must set: $RC = \frac{T}{2}$.
+Under this condition, the transfer function \( \bar{H}(z) \) simplifies to:
+\[
+\bar{H}(z) = z^{-1}
+\]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{dgdgsgs.png}
+    \caption{Computability scheme for a capacitor}
+    \label{fig:enter-label}
+\end{figure}
+
+
+In the wave domain, we can now connect the second port of the WD integrator (or mutator) to a nonlinear reflection function \( u^{-} = u^{-}(u^{+}) \), derived from the nonlinear characteristic \( f(v, q) = 0 \).  
+Here, the term "integrator" refers to the implicit behavior of the capacitor, which accumulates the reflected wave \( u^{-} \) based on the incident wave \( u^{+} \).  
+
+When the capacitor behaves linearly, we retrieve the classic Fettweis results:
+\[
+C = \bar{C}, \quad R = \frac{T}{2C}
+\]
+In this specific case, \( p = 0 \) and the combination of the allpass filter and the mutator reduces to a simple delay element.
+
+
+
+\subsubsection{Nonlinear Inductor in the WD Domain}
+
+\textbf{The nonlinear (NL) inductor} can be defined as an algebraic relationship between the integral of across variables (i.e. voltage, force, pressure) and through variables (i.e. current, velocity, flow). This relationship can be expressed as:
+\[ F_k(\varphi_1, \ldots, \varphi_n; i_1, \ldots, i_n) = 0, \quad k = 1, \ldots, n \]
+In the\textit{ single-port case}, the nonlinear inductor can be expressed as:
+\[ F(\varphi, i) = 0 \]
+For current-controlled inductor, the flux \( \varphi \) can be written as a function of current \( i \), whereas for voltage-controlled, \( i \) can be expressed in terms of \( \varphi \). Consequently, we define the voltage as:
+\[ v = \dot{\varphi} = \frac{\partial \varphi}{\partial i} \cdot \frac{\partial i}{\partial t} = L(i) \cdot \dot{i} \]
+where \( L(i) \) is the current-controlled inductance, defined as:
+\[ L(i) = \frac{d\varphi}{di} \]
+Cannot be implemented directly in the WD domain because a NL operator and a L-tf cannot be swapped in order
+Since the NL inductor is defined as a differential equation involving memory, it cannot be directly implemented in the WD domain. Thus, we introduce two special waves to handle the NL inductor as if it were a resistive element
+\[ \varphi^+ = \frac{1}{2}(\varphi + Li) \qquad \varphi^- = \frac{1}{2}(\varphi - Li) \]
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Capacitor vs Inductor: Introduction of Wave Variables}]
+\textbf{Capacitor:}  
+In the case of the capacitor, \( u^+ \) and \( u^- \) are introduced as completely new wave variables.  
+Before this definition, there was no explicit wave-based representation for charge.
+
+\textbf{Inductor:}  
+For the inductor, \( \varphi^+ \) and \( \varphi^- \) are not new variables.  
+Instead, they are a decomposition of the existing flux \( \varphi \), which was already defined as the integral of voltage.  
+Here, the flux is split into incident and reflected components.
+\end{tcolorbox}
+In terms of these waves, the flux and current can be expressed as:
+\[ \varphi = \varphi^+ + \varphi^- \Rightarrow
+v^+ + v^- = \dot{\varphi}^+ + \dot{\varphi}^-, \qquad i = \frac{\varphi^+ - \varphi^-}{L} = \frac{v^+ - v^-}{R} \]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{hkggg.png}
+    \caption{WD mutator}
+    \label{fig:enter-label}
+\end{figure}
+This approach, termed "through" integration, allows the formulation of a signal-dependent reflection coefficient under appropriate conditions of computability.
+
+Applying the Laplace transform with \( \tau = \frac{L}{R} \), we obtain:
+\[ V^- - s \Phi^+ = -V^+ + s \Phi^- \Rightarrow \tau V^- + \Phi^+ = \tau V^+ + \Phi^- \]
+By solving these equations, the transfer function \( H(s) \) is defined as before as:
+\[ H(s) = \frac{1 - \tau s}{1 + \tau s} \]
+Rewriting the WD relations in the transformed domain using $H(s)$, we can express the wave variables as:
+\[ V^- = -H(s)V^+ + \frac{1}{\tau}[1 - H(s)] \Phi^- \qquad \Phi^+ = \tau [1 + H(s)] V^+ + H(s) \Phi^- \]
+If we define the wave variables as:
+\[ W^+ = \tau V^+ \qquad W^- = \tau V^- \]
+Then, the scattering matrix for the NL inductor can be expressed as:
+\[ W^- = -H(s) W^+ + [1 - H(s)] \Phi^- \qquad \Phi^+ = [1 + H(s)] W^+ + H(s) \Phi^- \]
+we obtain a Kelly-Lochbaum scattering cell (with a sign change w.r.t. the NL
+capacitor)
+For computability, the parameter \( p \) quantifies the deviation of \( T \) from \( 2\tau \), where:
+\[ H(z) = \frac{p + z^{-1}}{1 + p z^{-1}}, \quad p = \frac{T - 2\tau}{T + 2\tau} \]
+To avoid instantaneous dependency and achieve a delay of one sample, we set \( R = \frac{2L}{T} \), which results in \( p = 0 \), transforming the WD integrator to a simple delay element:
+\[ \bar{H}(z) = z^{-1} \]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{sssagine.png}
+    \caption{Computability scheme for an inductor}
+    \label{fig:enter-label}
+\end{figure}
+For implementation, the WD integrator's second port is linked to a nonlinear reflection function \( \varphi^- = \varphi^-(\varphi^+) \), derived from the nonlinear relation \( f(\varphi, i) = 0 \).
+
+In the linear case, the expressions align with Fettweis' formulation:
+\[ L = \bar{L}, \quad R = \frac{2\bar{L}}{T} \]
+With \( p = 0 \), the combination of allpass and mutator simplifies to a delay element with a sign change.
+
+\subsection{Examples of Nonlinear Elements in WDFs}
+
+\subsubsection{Chua’s Circuit}
+Chua’s circuit represents a benchmark nonlinear system composed of two capacitors, an inductor, a linear resistor, 
+and a nonlinear resistor.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{chua1.png}
+    \caption{$K$-domain (electrical/Kirchhoff) equivalent (top) 
+  and its WD realization (bottom).}
+    \label{fig:enter-label}
+\end{figure}
+
+Within the WDF framework, each element is mapped into its wave representation through 
+adaptors. The parallel connection of $L$ and $C_1$ is modeled with an equivalent port resistance
+\[
+R_{p1} = \frac{2L}{T} \; \Big\| \; \frac{T}{2C_1},
+\]
+which is then cascaded with the linear resistor $R$, yielding
+\[
+R_s = R_{p1} + R.
+\]
+The second capacitor $C_2$ is included in parallel, leading to
+\[
+R_{p2} = R_s \; \Big\| \; \frac{T}{2C_2}.
+\]
+Finally, the nonlinear resistor $R_{nl}$ is connected, introducing the essential nonlinearity of the model.
+Notice that the nonlinear resistor cannot be adapted directly, since its effective resistance depends on the instantaneous signal.  Instead, the port facing the nonlinear element is adapted, while the nonlinearity is incorporated through a reflection  function that relates the incident and reflected waves. This guarantees that the rest of the WDF structure remains 
+reflection-free and stable.
+In particular, the nonlinear resistor is expressed in the $(v,i)$ plane and then mapped into the wave domain $(v^+, v^-)$ using the graphical method,
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{chua2.png}
+    \caption{Nonlinear resistor characteristic represented in $(v,i)$ (left) and mapped 
+    into the wave domain $(v^+, v^-)$ (right).}
+\end{figure}
+
+When the complete WDF implementation of Chua’s circuit is simulated, 
+the nonlinear feedback introduced by the characteristic of the resistor produces 
+the well-known chaotic dynamics of the system (double-scroll attractor). 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{chua3.png}
+    \caption{Phase portraits of Chua’s circuit obtained from the WDF implementation.}
+\end{figure}
+
+This confirms that the WDF discretization is able to capture the chaotic 
+behavior of the original continuous-time circuit, while retaining stability 
+properties guaranteed by the scattering formalism.
+
+\subsubsection{Reed-bore interaction}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.4\linewidth]{reedbore1.png}
+    \includegraphics[width=.5\linewidth]{reedbore2.png}
+  \caption{Single‑reed mouthpiece and cross‑section (left) and physical/WD representation of a single-reed instrument}
+\end{figure}
+This is the physical setup of a single‑reed exciter (clarinet‑type). The player imposes a mouth pressure $p_m$ against the reed; the bore pressure is $p_b$.
+The pressure drop $p_{\mathrm{nl}}=p_m-p_b$ sets the nonlinear volume flow $U$ through the reed channel, whose opening is
+controlled by the lip (embouchure).
+
+\\
+The reed introduces a nonlinear scattering relation between incident and reflected pressure waves $(p^+,p^-)$, 
+while the bore is modeled by bidirectional delay lines. 
+The tone-hole lattice and the bell are included as frequency-dependent reflection filters, 
+accounting for radiation and boundary effects.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.5\linewidth]{reedbore3.png}
+  \caption{Reed table (flow vs.\ pressure drop) and its wave‑domain reflection law.}
+\end{figure}
+
+The static reed characteristic $U(p_{\mathrm{nl}})$ increases with pressure drop, saturates, and clamps at closure.
+After changing variables to waves $(p^+,p^-)$ at the adapted port, the table becomes a nonlinear reflection function $p^-=g(p^+)$ used at the reed–bore junction.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.5\linewidth]{reedbore4.png}
+  \caption{$K$-domain (electrical/Kirchhoff) equivalent (top) 
+  and its WD realization (bottom).}
+\end{figure}
+In the WDF/DWG discretization, the reed nonlinearity $f(\cdot)$ is modeled by a WDF attached to an adapted port 
+with resistance $R_{\mathrm{int}}$, ensuring proper scattering. 
+The acoustic tube is implemented as a DWG with two delay lines, while radiation is handled by a causal filter $K(z)$ at the bell. 
+This hybrid structure avoids delay-free loops and guarantees stable, efficient simulation.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.5\linewidth]{reedbore5.png}
+  \caption{Example simulation: pressure $p(t)$ and reed flow $U(t)$ showing sustained self‑oscillation.}
+\end{figure}
+Once the blowing pressure $p_m$ exceeds the oscillation threshold, the reed–bore interaction enters a limit-cycle
+regime. The pressure signal appears quasi-sinusoidal, while the reed flow shows pulsed, asymmetric shapes due to
+periodic reed closure, reproducing the characteristic excitation mechanism of single-reed instruments.
+
+\subsubsection{Jet-resonator interaction}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.5\linewidth]{jet1.png}
+  \caption{Nonlinear jet characteristic.}
+\end{figure}
+In flute-like instruments the exciter is a jet of air, modeled as a nonlinear relation $u=f(p_{\mathrm{nl}})$ 
+between the pressure drop $p_{\mathrm{nl}}=P_0-p$ and the injected flow. 
+The left plot shows the jet characteristic (sigmoidal, saturating at high pressures),
+while the right plot reformulates it in the wave domain, yielding the nonlinear reflection law used at the bore junction.
+
+\begin{figure}[H]
+  \centering
+    \includegraphics[width=.5\linewidth]{jet2.png}
+  \caption{Simulation of jet-switch oscillations}
+\end{figure}
+
+Once the jet instability threshold is exceeded, self-sustained oscillations arise. 
+The flow $u(t)$ (left) exhibits square-wave-like switching due to periodic jet deflection, 
+while the pressure $p(t)$ in the tube (right) becomes a quasi-sinusoidal standing wave, 
+illustrating the jet–resonator feedback loop.
+
+
+\subsubsection{Bow-string interaction}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.3\linewidth]{reileigh1.png}
+  \includegraphics[width=.6\linewidth]{reileigh2.png}
+  \caption{Reileigh prototype oscillator left) and nonlinear force–velocity characteristic (right).}
+\end{figure}
+The Reileigh model describes the bow–string contact as a canonical mass–spring
+oscillator driven by a moving belt (representing the bow). The imposed belt velocity
+$\dot{x}_0$ enforces relative motion at the contact, while the spring–mass system
+captures the string dynamics subject to nonlinear friction.
+
+\
+The nonlinear friction law exhibits two stable branches (stick and slip) and one unstable branch, which
+in the wave domain $(a,b)$ defines the nonlinear scattering function at the bowing junction.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.45\linewidth]{reileigh3.png}
+  \includegraphics[width=.45\linewidth]{reileigh4.png}
+  \caption{$K$-domain (electrical/Kirchhoff) equivalent (left) 
+  and its WD realization (right).}
+\end{figure}
+
+The mechanical system is mapped to the $K$-domain as an $LC$ resonator (string inertia and compliance) 
+with a nonlinear resistor $R_{\mathrm{nl}}$ (friction law) and a source $V_0$ (bow velocity).
+In the WD discretization, each K-domain element is mapped into its wave-digital counterpart according to the adaptation rules: $L$ and $C$ yield delays $z^{-1}$, the source $V_0$ is represented as two half-sources $V_0/2$, and the nonlinear resistor becomes a scattering function $g[\cdot]$.This preserves passivity and avoids delay-free loops.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.55\linewidth]{reileigh5.png}
+  \includegraphics[width=.28\linewidth]{reileigh6.png}
+  \caption{Simulated force (left), velocity (center) and phase (right) diagram.}
+\end{figure}
+The force signal shows stick–slip oscillations, while the velocity alternates between plateaus (stick) 
+and jumps (slip), reproducing the bowing cycle.
+The phase portrait in the force–velocity plane converges to a limit cycle,
+illustrating the self-sustained oscillations typical of bowed strings.
+
+\\
+The Reileigh oscillator serves as a simplified paradigm of self–excited oscillations
+arising from frictional contact with a moving surface. The bow–string interaction model
+extends the same principle to a musical context, where the bow motion replaces the belt
+and the vibrating string section replaces the mass–spring system, thus embedding the
+nonlinear friction law into a distributed resonator.
+\\
+
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.35\linewidth]{bow1.png}
+  \includegraphics[width=.5\linewidth]{bow5.png}
+  \caption{Mechanical schematic of the bow-string interaction model (left) and non linear characteristic (right)}
+\end{figure}
+
+The bow is driven at prescribed tangential velocity $U(t)$ and pressed against the
+string with normal force $F_z$. The local contact is lumped as a small bow–string
+subsystem with stiffness $K$, mass $m$ and damping $B$. The goal is to enforce, at
+the contact point, (i) continuity of interaction \textbf{force} and (ii) the appropriate
+\textbf{relative velocity} that feeds the nonlinear friction law.
+
+\\
+The characteristic exhibits two stable branches (stick/slow slip and fast slip) and
+an unstable middle region; in wave variables this becomes a reflection function
+$b=g(a)$ attached to an adapted port in the WDF.
+
+
+\begin{figure}[H]
+  \centering
+    \includegraphics[width=0.5\linewidth]{bow2.png}\\
+
+
+    \includegraphics[width=0.5\linewidth]{bow4.png}\\
+
+  \caption{$K$-domain (electrical/Kirchhoff) equivalent (left) 
+  and its WD realizations (right).}
+\end{figure}
+
+
+In the K-domain diagram we use the force–voltage (impedance) analogy, i.e., $F\!\leftrightarrow\!V$ and $v\!\leftrightarrow\!I$: the contact \textbf{mass} $m$ is an inductor $L=m$, the \textbf{spring} $K$ is a capacitor $C=1/K$ (compliance), the \textbf{damper} $B$ is a resistor $R=B$, the imposed belt speed $U(t)$ acts as a controlled \textbf{force/voltage source} $f(U)$, and the contact friction is a \textbf{nonlinear resistor} $R_{\mathrm{nl}}(\cdot)$.
+
+\\
+In the WD representation, distributed string sections are implemented as DWGs and terminated by the reflection
+filters $G(z)$ (fingerboard) and $H(z)$ (bridge). The lumped contact branch below is a\textbf{WDF} realization: the mass $m$ and the compliance $1/k$ are
+implemented as wave-digital integrators (all-pass + $z^{-1}$, indicated by the small
+$T$ boxes), which prevents delay-free loops; the damper $B$ is a resistive port; the
+imposed belt speed $U(t)$ enters as a wave source via the standard $\pm V_0/2$ split;
+and the contact nonlinearity $\mathrm{nl}(\cdot)$ is a one-port scattering element
+connected to an adapted port so that its reflection law $b=g(a)$ can be solved
+instantaneously each sample.
+
+
+\\
+Let $u(t)$ be the bow–contact velocity (state variable of the lumped branch) and
+$U(t)$ the belt velocity (input). The string velocities seen from the junction are
+denoted by $v$ and $u'$ (left/right). The nonlinear relative (slip) velocity used by
+the friction law is $v_{nl}$.
+
+\[
+\boxed{\;f_{\mathrm{arc}}(t)
+= -\,m\,\dot{u}(t)
+\;-\;K\!\int u(t)\,dt \;-\;B\,u(t)
+\;+\;K\!\int U(t)\,dt \;+\;B\,U(t)\;}
+\tag{bow dynamics}
+\]
+
+The force in the branch equals inertia $-m\dot u$, plus elastic and
+viscous contributions proportional to the relative motion with respect to the
+belt: $K(\! \int U - \int u)$ and $B(U-u)$.
+
+\[
+\boxed{\;f_{nl}(t)
+= \frac{\Delta\mu\,F_z}{-\,(u - v)/\alpha + 1}\;+\;\mu_d\,F_z\;}
+\tag{dynamic friction}
+\]
+
+A Stribeck–type law: $\mu_d$ is the dynamic friction coefficient, 
+$\Delta\mu=\mu_s-\mu_d$ the drop from static to dynamic friction, $\alpha$ sets the
+slope versus relative velocity $(u-v)$, and $F_z$ is the normal force.
+
+\[
+\boxed{\;f_{\mathrm{arc}}(t)=f_{nl}(t)\;=\;f(t)\;}
+\tag{force continuity}
+\]
+
+The interaction force is the same in both (lumped and nonlinear)
+descriptions—this closes the force balance at the junction.
+
+\[
+\boxed{\;v_{nl} = -\,v \;-\; u' \quad\Longrightarrow\quad v_{nl}+v+u' = 0\;}
+\tag{kinematic constraint}
+\]
+
+At the junction the algebraic sum of the two string velocities and
+the slip velocity is zero (no gap/no interpenetration). This provides the velocity
+constraint that, together with the force continuity, determines the scattering at
+the WD adaptor.
+
+\begin{figure}[H]
+
+    \centering
+    \includegraphics[width=0.7\linewidth]{bow6.png}\\
+
+  \caption{NExample time responses: interaction force $f(t)$ and contact velocity $v(t)$.}
+\end{figure}
+
+
+The signals display irregular, self–excited stick–slip bursts. Despite the sharp
+events, the WD–DWG network is free of delay–free loops and remains numerically robust.
+
+\subsubsection{Hammer-tine interaction (electric piano)}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.3\linewidth]{el1.png}
+  \includegraphics[width=.3\linewidth]{el2.png}
+  \caption{Electric piano action}
+\end{figure}
+
+The key parts are a piano-like hammer, a flexible metallic tine (cantilevered beam) and a magnetic pick-up with amplifier. The hammer excites the tine; the pick-up senses the tine motion and delivers the audio signal.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.2\linewidth]{el3.png}
+  \includegraphics[width=.55\linewidth]{el6.png}
+  \caption{Lumped mechanics model (left) and contact law in Kirchhoff variables and in wave variables (right).}
+\end{figure}
+
+A minimal lumped model uses two DOFs: a tine equivalent mass--spring $(M_t,K_t)$ and a hammer mass--spring $(M_m,K_m)$.  
+Contact is unilateral: no force until the hammer meets the tine, then (approximately) linear force with slope set by contact stiffness; the small loop $\alpha_t$ captures geometric leverage of the tine tip. In other words: \(F(x)=0\) for negative overlap (no contact), and \(F(x)=k_c\,x\) once engaged.  
+In the wave domain the same law is used as a one-port scattering function \(b=g(a)\), computed at an adapted port so it can be solved instantaneously each sample.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.5\linewidth]{el4.png}  \includegraphics[width=.6\linewidth]{el5.png}
+  \caption{K-domain partition and Wave-digital realization.}
+\end{figure}
+
+The tine and hammer subsystems exchange a contact force. The pick-up senses tine motion/current and the amplifier $h(\cdot)$ colors the spectrum.
+
+Each K-domain element maps to a passive wave adaptor: masses/compliances become all-pass (+ one-sample) integrator adaptors, dampers are resistive ports, external force $F$ enters as a wave source via the usual $\pm V_0/2$ split, and the unilateral contact becomes a memoryless reflection law \(b=g(a)\). This removes delay-free loops and preserves passivity.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.6\linewidth]{el7.png}
+  \caption{Transduction NLE.}
+\end{figure}
+
+The electromagnetic pickup delivers a voltage proportional to the time derivative of the magnetic flux \(\Phi\) linked to the coil, which depends nonlinearly on the instantaneous tine–pickup distance (gap \(d\)) and on the tine vertical displacement \(y_R(t)\) with offset \(h\):
+\[
+s(t)\;\approx\;-\frac{d}{dt}\,\Phi\!\big(y_R(t),d,h\big).
+\]
+Directly differentiating a strongly nonlinear \(\Phi(\cdot)\) is numerically fragile (noise amplification, stiff slopes near the magnet).
+
+To obtain a stable and accurate NLE, we (i) describe the coil–tine spacing with the geometry
+\[
+\xi(t)\;\triangleq\;\sqrt{\,d^2+\big(y_R(t)+h\big)^2\,},
+\]
+(ii) approximate the flux with an inverse power law (empirically, \(n\!\approx\!4\)):
+\[
+f\!\big(y_R(t)\big)\;=\;\frac{1}{\xi^4(t)}
+\;=\;\frac{1}{\big[d^2+\big(y_R(t)+h\big)^2\big]^2},
+\]
+and (iii) differentiate this well-behaved function and pass it through a soft limiter that captures pickup+amplifier saturation. Using \(q_t(t)\) as the tine tip displacement (same as \(y_R(t)\)), the final model is
+\[
+\boxed{\;
+s(t)\;=\;-\,V_{\mathrm{sat}}\;
+\tanh\!\left[
+\mu\,\frac{d}{dt}\!\left(\frac{1}{\,d^2+\big(q_t(t)+h\big)^2}\right)
+\right]\,,
+\;}
+\]
+where \(\mu\) lumps coil sensitivity and gain, and \(V_{\mathrm{sat}}\) sets the output ceiling.  
+The geometric re-parameterization yields a monotone, Lipschitz function of distance (good conditioning); the derivative gives the correct polarity and brightness dependence (faster motion \(\Rightarrow\) larger \(s\)); and \(\tanh(\cdot)\) ensures bounded, numerically stable behavior at small gaps and large amplitudes while reproducing amplifier saturation.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.6\linewidth]{el10.png}\hfill
+  \includegraphics[width=.3\linewidth]{el11.png}
+  \caption{Tine/hammer positions (left) and radiated output (right).}
+\end{figure}
+
+After impact the hammer quickly leaves contact and rests while the tine rings at its modal frequencies.  
+The transduced output shows a sharp, asymmetric attack followed by a bright, slowly decaying tone---typical of Rhodes/Wurlitzer instruments—arising from the nonlinear pickup geometry and the pick-up offset relative to the tine.
+
+
+
+
+\subsubsection{Hammer-string interaction (piano)}
+\subsubsection{Subharmonic oscillator}
+
+\clearpage

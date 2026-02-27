@@ -1,0 +1,616 @@
+\section{References and Code}
+
+\subsection*{References - Chapter 1}
+
+\begin{itemize}
+    \item \href{https://en.wikibooks.org/wiki/Sound_Synthesis_Theory/Oscillators_and_Wavetables}{Wikibooks. Sound Synthesis Theory / Oscillators and Wavetables}
+    \item C. S. Turner. “Recursive discrete-time sinusoidal oscillators”. IEEE Signal Processing Magazine, 20(3):103–111, May 2003.
+    \item U. Zölzer, ed. \textit{DAFX Digital Audio Effects}. John Wiley \& Sons, 2002.
+    \item S. Roucos, A. M. Wilgus. “High quality time-scale modification for speech”. \textit{IEEE Intl. Conf. on Acoustics, Speech and Processing (ICASSP), 1985}
+    \item C. Hamon, E. Mouline and F. Charpentier. “A diphone synthesis system based on time-domain prosodic modification of speech. IEEE Intl. Conf. on Acoustics, Speech and Signal Processing (ICASSP), 1989.
+    \item F. Avanzini, G. De Poli. “Algorithms for Sound and Music Computing”, 2008
+    \item V. Valimaki and A. Huovilainen. Antialiasing oscillators in subtractive synthesis. \textit{IEEE Signal Processing Magazine}, 24(2):116-125, Mar. 2007.
+    \item V. Valimaki. Discrete-time synthesis of the sawtooth waveform with reduced aliasing. \textit{IEEE Signal Processing Letters}, 12(3):214-217, Mar. 2005.
+    \item F. Avanzi and G. De Poli. Algorithms for sound and music computing, 2008.
+\end{itemize}
+
+\subsection*{References - Chapter 2}
+
+\begin{itemize}
+    \item U. Zölzer, editor. \textit{DAFX Digital Audio Effects}. John Wiley \& Sons, 2002.
+    \item U. Zölzer. \textit{Digital Audio Signal Processing}. John Wiley \& Sons, Chichester, UK, second edition, 2008.
+    \item P. A. Regalia and S. K. Mitra. Tunable digital frequency response equalization filters. \textit{IEEE Transactions on Acoustics, Speech and Signal Processing}, ASSP-35(1):118–120, Jan. 1987.
+    \item T. I. Laakso, V. Välimäki, M. Karjalainen and U. K. Laine. Splitting the unit delay. \textit{IEEE Signal Processing Magazine}, 13(1):30–60, Jan. 1996.
+    \item J. Dattorro. Effect design part 2: Delay-line modulation and chorus. \textit{J. Audio Eng. Soc.}, 45(10):764–788, Oct. 1997.
+    \item D. Rocchesso. Fractional addressed delay lines. \textit{IEEE Transactions on Speech and Audio Processing}, 8(6):717–727, Nov. 2000.
+    \item M. Nagahara and Y. Yamamoto. \( H^\infty \)-optimal fractional delay filters. \textit{IEEE Transactions on Signal Processing}, 61(18):4473–4480, Sept. 2013.
+    \item U. Zölzer. \textit{Digital Audio Signal Processing}. John Wiley \& Sons, Chichester, UK, first edition, 1997.
+    \item J. Pekonen, T. Pihlajamäki and V. Välimäki. Computationally efficient harmonic organ synthesis. In \textit{Proc. Int. Conf. on Digital Audio Effects (DAFX)}, Paris, FR, Sept. 19–23 2011.
+    \item J. Pekonen, V. Välimäki, J. S. Abel and J. O. Smith. Spectral delay filters with feedback and time-varying coefficients. In \textit{Proc. Int. Conf. on Digital Audio Effects (DAFX)}, 2005.
+    \item D. Rocchesso, S. Serafin, J. Abel and J. O. Smith. Doppler simulation and the Leslie effect. In \textit{Proc. Int. Conf. on Digital Audio Effects (DAFX)}, 2002.
+\end{itemize}
+
+\clearpage
+
+\subsection*{Code Snippets - Chapter 2}
+
+\subsubsection*{First-Order Shelving Filters}
+\begin{multicols}{2}
+\begin{verbatim}
+%% Parameters
+fs = 44100; % sampling frequency [Hz]
+Nfft = 4096; % number of FFT bins
+f = 0:fs/Nfft:fs-fs/Nfft;
+
+%% Low frequency shelving
+fc = 100; % cutoff frequency [Hz]
+Wc = 2*pi*fc/fs; % normalized cutoff frequency
+
+% Boost
+G = 20; % logarithmic gain [dB]
+V0 = 10^(G/20);
+H0 = V0-1;
+
+a = (tan(Wc/2)-1) / (tan(Wc/2)+1);
+
+num = [1 + H0/2 + H0/2*a, a + H0/2 + H0/2*a];
+den = [1, a];
+
+H = freqz(num, den, f(1:Nfft/2+1), fs);
+
+figure,
+semilogx(f(1:Nfft/2+1), 20*log10(abs(H))),
+grid, title(['Low frequency boost,
+G = ' num2str(G) ' dB'])
+xlabel('Frequency [Hz]'), ylabel('Magnitude [dB]')
+axis([20 f(Nfft/2+1) -20 20])
+
+% Cut
+G = -20; % logarithmic gain [dB]
+V0 = 10^(G/20);
+H0 = V0-1;
+
+a = (tan(Wc/2)-V0) / (tan(Wc/2)+V0);
+
+num = [1 + H0/2 + H0/2*a, a + H0/2 + H0/2*a];
+den = [1, a];
+
+H = freqz(num, den, f(1:Nfft/2+1), fs);
+
+figure,
+semilogx(f(1:Nfft/2+1), 20*log10(abs(H))),
+grid, title(['Low frequency cut,
+G = ' num2str(G) ' dB'])
+xlabel('Frequency [Hz]'), ylabel('Magnitude [dB]')
+axis([20 f(Nfft/2+1) -20 20])
+
+%% High frequency shelving
+fc = 1000; % cutoff frequency [Hz]
+Wc = 2*pi*fc/fs; % normalized cutoff frequency
+
+% Boost
+G = 20; % logarithmic gain [dB]
+V0 = 10^(G/20);
+H0 = V0-1;
+
+a = (tan(Wc/2)-1) / (tan(Wc/2)+1);
+
+num = [1 + H0/2 - H0/2*a, a - H0/2 + H0/2*a];
+den = [1, a];
+
+H = freqz(num, den, f(1:Nfft/2+1), fs);
+
+figure,
+semilogx(f(1:Nfft/2+1), 20*log10(abs(H))),
+grid, title(['High frequency boost,
+G = ' num2str(G) ' dB'])
+xlabel('Frequency [Hz]'), ylabel('Magnitude [dB]')
+axis([20 f(Nfft/2+1) -20 20])
+
+% Cut
+G = -20; % logarithmic gain [dB]
+V0 = 10^(G/20);
+H0 = V0-1;
+
+a = (V0*tan(Wc/2)-1) / (V0*tan(Wc/2)+1);
+
+num = [1 + H0/2 - H0/2*a, a - H0/2 + H0/2*a];
+den = [1, a];
+
+H = freqz(num, den, f(1:Nfft/2+1), fs);
+
+figure,
+semilogx(f(1:Nfft/2+1), 20*log10(abs(H))),
+grid, title(['High frequency cut,
+G = ' num2str(G) ' dB'])
+xlabel('Frequency [Hz]'), ylabel('Magnitude [dB]')
+axis([20 f(Nfft/2+1) -20 20])
+\end{verbatim}
+\end{multicols}
+
+\clearpage
+
+\subsubsection*{Second-Order Peak Filters}
+
+\begin{multicols}{2}
+\begin{verbatim}
+%% Parameters
+fs = 44100; % sampling frequency [Hz]
+Nfft = 4096; % number of FFT bins
+f = 0:fs/Nfft:fs-fs/Nfft;
+
+%% Mid-frequency peak
+fc = 600; % center frequency [Hz]
+Wc = 2*pi*fc/fs; % normalized center frequency
+
+fb = 200; % bandwidth [Hz]
+Wb = 2*pi*fb/fs; % normalized bandwidth
+
+% Boost
+G = 20; % logarithmic gain [dB]
+V0 = 10^(G/20);
+H0 = V0-1;
+
+a = (tan(Wb/2)-1) / (tan(Wb/2)+1);
+d = -cos(Wc);
+
+num = [1 + H0/2*(1+a), d*(1-a),
+       -a - H0/2*(1+a)];
+den = [1, d*(1-a), -a];
+
+H = freqz(num, den, f(1:Nfft/2+1), fs);
+
+figure,
+semilogx(f(1:Nfft/2+1), 20*log10(abs(H))),
+grid, title(['Boost, G = ' num2str(G) ' dB'])
+xlabel('Frequency [Hz]'), ylabel('Magnitude [dB]')
+axis([20 f(Nfft/2+1) -20 20])
+
+% Cut
+G = -20; % logarithmic gain [dB]
+V0 = 10^(G/20);
+H0 = V0-1;
+
+a = (tan(Wb/2)-V0) / (tan(Wb/2)+V0);
+d = -cos(Wc);
+
+num = [1 + H0/2*(1+a), d*(1-a), -a - H0/2*(1+a)];
+den = [1, d*(1-a), -a];
+
+H = freqz(num, den, f(1:Nfft/2+1), fs);
+
+figure,
+semilogx(f(1:Nfft/2+1), 20*log10(abs(H))),
+grid, title(['Cut, G = ' num2str(G) ' dB'])
+xlabel('Frequency [Hz]'), ylabel('Magnitude [dB]')
+axis([20 f(Nfft/2+1) -20 20])
+\end{verbatim}
+\end{multicols}
+
+\clearpage
+
+\subsubsection*{Fractional Delay}
+
+\begin{multicols}{2}
+\begin{verbatim}
+%% Parameters
+fs = 44100; % sampling frequency [Hz]
+tau = 0.0003; % delay [s]
+
+D = tau*fs
+
+N = 2*floor(D);
+n = 0:N;
+
+%% Least squares approximation
+h_ls = sinc(n-D);
+
+figure
+stem(n, h_ls), xlabel('Samples'),
+ylabel('Impulse response')
+title('Least Squares Approximation')
+
+[H_ls, f] = freqz(h_ls, 1, 'half', fs);
+
+figure,
+subplot(2,1,1)
+plot(f*fs/pi/2, db(abs(H_ls))),
+xlabel('Frequency [Hz]'),
+ylabel('Magnitude [dB]')
+axis([0, fs/2, -1 1]), grid
+title('Least Squares Approximation')
+subplot(2,1,2)
+grpdelay(h_ls, 1, 1024, 'half', fs)
+ylim([6, 16])
+
+%% Windowing
+h_win = h_ls .* hamming(N+1)';
+
+figure
+stem(n, h_win), xlabel('Samples'),
+ylabel('Impulse response')
+title('Windowing of LS Approximation')
+
+[H_win, f] = freqz(h_win, 1, 'half', fs);
+
+figure,
+subplot(2,1,1)
+plot(f*fs/pi/2, db(abs(H_win))),
+xlabel('Frequency [Hz]'),
+ylabel('Magnitude [dB]'),
+axis([0, fs/2, -1 1]), grid
+title('Windowing of LS Approximation')
+subplot(2,1,2)
+grpdelay(h_win, 1, 1024, 'half', fs)
+ylim([6, 16])
+
+
+%% Lagrange interpolation
+h_int = zeros(N+1,1);
+for nn = 0:N
+    k = (0:N)';
+    k = k(k~=nn);
+    h_int(nn+1) = prod((D-k)./(nn-k));
+end
+
+figure
+stem(n, h_int), xlabel('Samples'),
+ylabel('Impulse response')
+title('Lagrange interpolation')
+
+[H_int, f] = freqz(h_int, 1, 'half', fs);
+
+figure,
+subplot(2,1,1)
+plot(f*fs/pi/2, db(abs(H_int))),
+xlabel('Frequency [Hz]'),
+ylabel('Magnitude [dB]'),
+axis([0, fs/2, -1 1]), grid
+title('Lagrange interpolation')
+subplot(2,1,2)
+grpdelay(h_int, 1, 1024, 'half', fs)
+ylim([6, 16])
+\end{verbatim}
+\end{multicols}
+
+\clearpage
+
+\subsubsection*{FIR Comb Filtering}
+
+\begin{multicols}{2}
+\begin{verbatim}
+fs = 44100;
+
+% unit impulse
+N = 100;
+n = 0:N-1;
+x = zeros(N,1);
+x(1) = 1;
+
+% delay line
+tau = 0.001; % delay [seconds]
+M = floor(tau*fs);
+delayline = zeros(M, 1);
+
+% delay gain
+g = 0.5;
+
+y = zeros(N, 1);
+for ii = 1:N
+    y(ii) = x(ii) + g*delayline(end);
+    delayline = [x(ii); delayline(1:end-1)];
+end
+
+figure,
+stem(n,y), xlabel('Time [samples]'), ylabel('Amplitude')
+title('Time response')
+
+[H, f] = freqz(y, 1, 'half', fs);
+
+figure,
+plot(f*fs/pi/2, abs(H)),
+xlabel('Frequency [Hz]'),
+ylabel('Magnitude [dB]')
+axis([0, fs/2, 0 2]), grid
+title('Frequency response')
+\end{verbatim}
+\end{multicols}
+
+% \clearpage
+
+\subsubsection*{IIR Comb Filtering}
+
+\begin{multicols}{2}
+\begin{verbatim}
+fs = 44100;
+
+% unit impulse
+N = 100;
+n = 0:N-1;
+x = zeros(N,1);
+x(1) = 1;
+
+% delay line
+tau = 0.00025; % delay [seconds]
+M = floor(tau*fs);
+delayline = zeros(M, 1);
+
+% delay gain
+g = -0.5;
+c = 1;
+
+y = zeros(N, 1);
+for ii = 1:N
+    y(ii) = c*x(ii) + g*delayline(end);
+    delayline = [y(ii); delayline(1:end-1)];
+end
+
+figure,
+stem(n,y), xlabel('Time [samples]'), ylabel('Amplitude')
+title('Time response')
+
+[H, f] = freqz(y, 1, 'half', fs);
+
+figure,
+plot(f*fs/pi/2, abs(H)),
+xlabel('Frequency [Hz]'),
+ylabel('Magnitude [dB]')
+axis([0, fs/2, 0 2]), grid
+title('Frequency response')
+\end{verbatim}
+\end{multicols}
+
+\clearpage
+
+\subsubsection*{Universal Comb Filter}
+
+\begin{multicols}{2}
+\begin{verbatim}
+fs = 44100;
+
+% parameters
+BL = 0.5;
+FB = -0.5;
+FF = 1;
+
+% unit impulse
+N = 100;
+n = 0:N-1;
+x = zeros(N,1);
+x(1) = 1;
+
+% delay line
+tau = 0.00025; % delay [seconds]
+M = floor(tau*fs);
+delayline = zeros(M, 1);
+
+% delay gain
+g = 0.5;
+c = 1;
+
+y = zeros(N, 1);
+for ii = 1:N
+    xh = x(ii) + FB*delayline(end);
+    y(ii) = FF*delayline(end) + BL*xh;
+    delayline = [xh; delayline(1:end-1)];
+end
+
+figure,
+stem(n,y), xlabel('Time [samples]'), ylabel('Amplitude')
+title('Time response')
+
+[H, f] = freqz(y, 1, 'half', fs);
+
+figure,
+plot(f*fs/pi/2, abs(H)),
+xlabel('Frequency [Hz]'),
+ylabel('Magnitude [dB]')
+axis([0, fs/2, 0 2]), grid
+title('Frequency response')
+\end{verbatim}
+\end{multicols}
+
+% \clearpage
+
+\subsection*{References - Chapter 6}
+
+\begin{itemize}
+    \item P. Brémaud. \textit{Mathematical Principles of Signal Processing}. Springer Science+Business Media, New York, NY, USA, 2002.
+    \item M. Vetterli, J. Kovacevic and V. K. Goyal. \textit{Foundations of Signal Processing}. Cambridge University Press, Cambridge, UK, 2014.
+    \item F. W. J: Olver, editor. NIST \textit{Handbook of Mathematical Functions}. National Institute of Standards and Technology, New York, NY, USA, 2010.
+    \item N. Xiang and C. Landschoot. Bayesian inference for acoustic direction of arrival analysis using spherical harmonics. \textit{Entropy}, 21, 2019.
+    \item E. G. Williams. \textit{Fourier Acoustics}. Academic Press, London, UK, 1999.
+    \item D. Colton and R. Kress. \textit{Inverse Acoustic and Electromagnetic Scattering Theory}. Springer-Verlag, Berlin Heidelberg, DE, 1992.
+    \item I. S. Gradshteyn and I. M. Ryzhik. \textit{Table of Integrals, Series and Products}. Academic Press, Burlington, MA, USA, seventh edition, 2007.
+    \item M. Abramowitz and I. A. Stegun, editors. \textit{Handbook of Mathematical Functions}. National Bureau of Standards, Washington DC, USA, tenth edition, 1972.
+    \item P. M. Morse and K. U. Ingard. \textit{Theoretical Acoustics}. Princeton University Press, Princeton, NJ, USA, with errata page, first Princeton University Press edition, 1986.
+    \item L. E. Kinsler, A. R. Frey, A. B. Coppens and J. V. Sanders. \textit{Fundamentals of Acoustics}. John Wiley \& Sons, New York, NY, USA, fourth edition, 2000.
+    \item P. M. Morse and H. Feshbach. \textit{Methods of Theoretical Physics}, volume I. McGraw-Hill, New York, NY, USA, 1953.
+    \item S. Spors, R. Rabenstein and J. Ahrens. The theory of wave field synthesis revisited. In Proc. \textit{AES 124th Conv.}, Amsterdam, NE, May 17-20 2008
+\end{itemize}
+
+\subsection*{References - Chapter 7}
+
+\begin{itemize}
+    \item V. Välimäki, J.D. Parker, L. Savioja, J.O. Smith, J.S. Abel, “Fifty Years of Artificial Reverberation”, IEEE Tr. Audio, Speech and Language Processing, Vol. 20, No. 5, July 2012, pp. 1421-1448.
+    \item W.G. Gardner, “Reverberation Algorithms”, Ch. 3 of “Applications of Digital Signal Processing to Audio and Acoustics”, M. Karls and K.H. Brandenburg eds., Springer, 2002, 2nd ed. 2013.
+    \item S.J. Schlecht, E.A.P. Habets, “On Lossless Feedback Delay Networks”. IEEE. Tr. Signal Processing, Vol. 65, No. 6, 2017, pp. 1554-1654.
+\end{itemize}
+
+\textit{Supplemental reading:}
+\begin{itemize}
+    \item D. Rocchesso, J.O. Smith, “Circulant and elliptic feedback delay networks for artificial reverberation”, IEEE Tr. Speech and Audio Processing, Vol. 5, No. 1, Jan 1997, pp. 51-63.
+\end{itemize}
+
+\subsection*{References - Chapter 9}
+
+\begin{itemize}
+    \item J. Ahrens.\textit{ Analytic Methods of Sound Field Synthesis}.
+Springer-Verlag, Berlin, DE, 2012.
+\item E. G. Williams. \textit{Fourier Acoustics}. Academic Press, London,
+UK, 1999.
+\item D. Colton and R. Kress. \textit{Inverse Acoustic and
+Electromagnetic Scattering Theory}. Springer-Verlag, Berlin
+Heidelberg, DE, 1992.
+\item F. W. J: Olver, editor. \textit{NIST Handbook of Mathematical
+Functions}. National Institute of Standards and Technology,
+New York, NY, USA, 2010.
+\item N. Xiang and C. Landschoot. Bayesian inference for acoustic
+direction of arrival analysis using spherical harmonics.
+\textit{Entropy}, 21, 2019.
+\item R. A. Kennedy, P. Sadeghi, T. D. Abhayapala and H. M.
+Jones. Intrinsic limits of dimensionality and richness in
+random multipath fields. \textit{IEEE Transactions on Signal
+Processing}, 55(6):2542–2556, June 2007.
+\end{itemize}
+
+\clearpage
+
+\subsection*{Code Snippets - Chapter 9}
+
+\subsubsection*{Spherical Bessel and Hankel Functions}
+
+\begin{verbatim}
+% argument
+z = 0:.001:12;
+
+% l index
+l = 0:4;
+
+[Z, L] = meshgrid(z,l);
+
+% spherical Bessel functions
+j = sqrt(pi/2 ./ Z) .* besselj(L+0.5, Z);
+y = sqrt(pi/2 ./ Z) .* bessely(L+0.5, Z);
+
+% spherical Hankel functions
+h1 = j + 1i*y;
+h2 = j - 1i*y;
+
+% plot functions
+figure
+plot(z,real(j)), legend('l=0', 'l=1', 'l=2', 'l=3', 'l=4'), xlabel('z'), grid
+title('Spherical Bessel function j_l(z)'), axis([0 12 -0.4 1])
+
+figure
+plot(z,real(y)), legend('l=0', 'l=1', 'l=2', 'l=3', 'l=4'), xlabel('z'), grid
+title('Spherical Bessel function y_l(z)'), axis([0 12 -0.4 0.4])
+
+figure
+subplot(1,2,1)
+plot(z,real(h1)), legend('l=0', 'l=1', 'l=2', 'l=3', 'l=4')
+xlabel('z'), axis([0 12 -0.4 1]), grid
+title('Re h_l^{(1)}(z)')
+subplot(1,2,2)
+plot(z,imag(h1)), legend('l=0', 'l=1', 'l=2', 'l=3', 'l=4')
+xlabel('z'), axis([0 12 -1 0.4]), grid
+title('Im h_l^{(1)}(z)')
+
+figure
+subplot(1,2,1)
+plot(z,real(h2)), legend('l=0', 'l=1', 'l=2', 'l=3', 'l=4')
+xlabel('z'), axis([0 12 -0.4 1]), grid
+title('Re h_l^{(2)}(z)')
+subplot(1,2,2)
+plot(z,imag(h2)), legend('l=0', 'l=1', 'l=2', 'l=3', 'l=4')
+xlabel('z'), axis([0 12 -0.4 1]), grid
+title('Im h_l^{(2)}(z)')
+\end{verbatim}
+
+\clearpage
+
+\subsection*{References - Chapter 10}
+
+\begin{itemize}
+    \item{Middlebrooks1992}
+J. C. Middlebrooks, "Narrow-band sound localization related to external ear acoustics," \textit{J. Acoust. Soc. Am.}, vol. 92, no. 5, pp. 2607–2624, May 1992.
+
+\item{Stecker2012}
+C. Stecker and F. J. Gallun, \textit{Translational perspectives in auditory neuroscience: normal aspects of hearing}, chapter Binaural hearing, sound localization and spatial hearing, pp. 383–434, Plural Publishing, San Diego, USA, 2012.
+
+\item{Iida2019}
+K. Iida, \textit{Head-Related Transfer Function and Acoustic Virtual Reality}, chapter Head-Related Transfer Function and Acoustic Virtual Reality, pp. 15–24, Springer, Singapore, 2019.
+
+\item{Blauert1997}
+J. Blauert, \textit{Spatial Hearing}, Revised Edition, The MIT Press, Boston, MA, USA, 1997.
+
+\item{Bronkhorst1999}
+A. W. Bronkhorst and T. Houtgast, "Auditory distance perception in rooms," \textit{Nature}, vol. 397, no. 2, pp. 517–520, Feb. 1999.
+
+\item{Algazi2011}
+V. R. Algazi and R. O. Duda, "Headphone-based spatial sound," \textit{IEEE Signal Processing Magazine}, vol. 28, no. 1, pp. 33–42, Jan. 2011.
+
+\item{Kulkarni1995}
+A. Kulkarni, S. K. Isabelle and H. S. Colburn, "On the minimum-phase approximation of hear-related transfer functions," in \textit{Proc. IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA)}, 1995.
+
+\item{Algazi2001}
+V. R. Algazi, R. O. Duda, D. M. Thompson and C. Avendano, "The CIPIC HRTF database," in \textit{Proc. IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA)}, 2001.
+
+\item{Stan2002}
+G. B. Stan, J. J. Embrechts and D. Archambeau, "Comparison of different impulse response measurement techniques," \textit{J. Audio Eng. Soc.}, vol. 50, no. 4, pp. 249–262, Apr. 2002.
+
+\item{Hartung1999}
+K. Hartung, J. BraJ. Braasch and J. Sterbing, "Comparison of different methods for the interpolation of head-related transfer functions," in \textit{Proc. AES 16th Int. Conf.}, 1999.
+
+\item{Runkle1995}
+P. R. Runkle, M. A. Blommer and G. H. Wakefield, "Comparison of head-related transfer function interpolation methods," in \textit{Proc. IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA)}, 1995.
+
+\item{Ajdler2008}
+T. Ajdler, C. Faller, L. Sbaiz and M. Vetterli, "Sound field analysis along a circle and its applications to HRTF interpolation," \textit{J. Audio Eng. Soc.}, vol. 56, no. 3, pp. 156–175, 2008.
+
+\item{Zhang2012}
+W. Zhang, M. Zhang, R. A. Kennedy and T. D. Abhayapala, "On high-resolution head-related transfer function measurements: An efficient sampling scheme," \textit{IEEE Transactions on Audio, Speech and Language Processing}, vol. 20, no. 2, pp. 575–584, 2012.
+
+\item{Jin2014}
+C. T. Jin, P. Guillon, N. Epain, R. Zolfaghari, A. van Schaik, A. I. Tew, C. Hetherington and J. Thorpe, "Creating the Sydney York morphological and acoustic recordings of ears database," \textit{IEEE Transactions on Multimedia}, vol. 16, no. 1, pp. 37–46, Jan. 2014.
+
+\item{Bonacina2015}
+L. Bonacina, "3D models extraction for personalized binaural audio applications," Master's thesis, Politecnico di Milano, 2015.
+\end{itemize}
+
+
+\subsection*{References - Chapter 11}
+
+\begin{itemize}
+    \item V. R. Algazi and R. O. Duda. Headphone-based spatial
+sound. \textit{IEEE Signal Processing Magazine}, 28(1):33–42, Jan.
+2011.
+\item P. Mackensen, U. Felderhoff, G. Theile, U. Horbach and
+R. Pellegrini. Binaural room scanning - a new tool for
+acoustic and psychoacoustic research. \textit{J. Acoust. Soc. Am.},
+105(2):1343–1344, Feb. 1999.
+\end{itemize}
+
+\subsection*{References - Chapter 12}
+
+\begin{itemize}
+    \item S. Spors, H. Wierstorf, A. Raake, F. Melchior, M. Frank and F. Zotter. Spatial sound with loudspeakers and its perception: A review of the current state. \textit{Proceedings of the IEEE}, 101(9):1920--1938, 2013.
+\end{itemize}
+
+\subsection*{References - Chapter 13}
+
+\begin{itemize}
+  \item S. Spors, R. Rabenstein and J. Ahrens. The theory of wave field synthesis revisited. In \emph{Proc.\ AES 124th Conv.}, Amsterdam, NE, May 17–20 2008.
+  \item A. J. Berkhout, D. D. Vries and P. Vogel. Acoustic control by wave field synthesis. \emph{J. Acoust. Soc. Am.}, 93(5):2764–2778, May 1993.
+  \item S. Spors and R. Rabenstein. Spatial aliasing artifacts produced by linear and circular loudspeaker arrays used for wave field synthesis. In \emph{Proc.\ AES 120th Conv.}, Paris, FR, May 20–23 2006.
+  \item S. Spors. Investigation of spatial aliasing artifacts of wave field synthesis in the temporal domain. In \emph{Proc.\ 34th German Annual Conf.\ on Acoustics (DAGA)}, 2008.
+  \item D. de Vries and M. M. Boone. Wave field synthesis and analysis using array technology. In \emph{Proc.\ IEEE Workshop on Applications of Signal Process.\ to Audio and Acoustics (WASPAA)}, 1999.
+  \item F. Antonacci, J. Filos, M. R. P. Thomas, E. A. P. Habets, A. Sarti, P. A. Naylor and S. Tubaro. Inference of room geometry from acoustic impulse responses. \emph{IEEE Trans. Audio, Speech and Language Process.}, 20(10):2683–2695, Dec. 2012.
+  \item I. Dokmanić, R. Parhizkar, A. Walther, Y. M. Lu and M. Vetterli. Acoustic echoes reveal room shape. \emph{PNAS}, 110(30):12186–12191, 2013.
+\end{itemize}
+
+\subsection*{References - Chapter 14}
+
+\begin{itemize}
+  \item E. G. Williams. \textit{Fourier Acoustics}. Academic Press, London, UK, 1999.
+  \item R. A. Kennedy, P. Sadeghi, T. D. Abhayapala and H. M. Jones. Intrinsic limits of dimensionality and richness in random multipath fields. \textit{IEEE Transactions on Signal Processing}, 55(6):2542–2556, June 2007.
+  \item D. Colton and R. Kress. \textit{Inverse Acoustic and Electromagnetic Scattering Theory}. Springer-Verlag, Berlin Heidelberg, DE, 1992.
+  \item N. Xiang and C. Landschoot. Bayesian inference for acoustic direction of arrival analysis using spherical harmonics. \textit{Entropy}, 21, 2019.
+  \item T. D. Abhayapala and D. B. Ward. Theory and design of high order sound field microphones using spherical microphone array. In \textit{Proc. IEEE Int. Conf. on Acoustics, Speech and Signal Process. (ICASSP)}, 2002.
+  \item S. Spors, H. Wierstorf, A. Raake, F. Melchior, M. Frank and F. Zotter. Spatial sound with loudspeakers and its perception: A review of the current state. \textit{Proceedings of the IEEE}, 101(9):1920–1938, 2013.
+  \item Y. J. Wu and T. D. Abhayapala. Theory and design of soundfield reproduction using continuous loudspeaker concept. \textit{IEEE Transactions on Audio, Speech and Language Processing}, 17(1):107–116, 2009.
+  \item M. Abramowitz and I. A. Stegun, editors. \textit{Handbook of Mathematical Functions}. National Bureau of Standards, Washington DC, USA, tenth edition, 1972.
+  \item F. W. J. Olver, editor. \textit{NIST Handbook of Mathematical Functions}. National Institute of Standards and Technology, New York, NY, USA, 2010.
+  \item J. Meyer and G. Elko. A highly scalable spherical microphone array based on an orthonormal decomposition of the soundfield. In \textit{Proc. IEEE Int. Conf. on Acoustics, Speech and Signal Process. (ICASSP)}, 2002.
+  \item B. Rafaely. Analysis and design of spherical microphone arrays. \textit{IEEE Transactions on Speech and Audio Processing}, 13(1):135–143, Jan. 2005.
+\end{itemize}

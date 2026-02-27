@@ -1,0 +1,512 @@
+\section{Review of Acoustics}
+
+\subsection{Signal Processing Fundamentals}
+
+We remind some definitions related to a generic signal in continuous time $x(t): \mathbb{R} \rightarrow \mathbb{C}$.
+The \textbf{Fourier} (and Inverse Fourier) transformations are:
+
+\[
+X(\omega) = \int_{-\infty}^{+\infty} x(t) e^{-j \omega t} \ dt, \quad \omega \in \mathbb{R} \qquad \qquad x(t) = \frac{1}{2\pi} \int_{-\infty}^{+\infty} X(\omega) e^{j \omega t} \ d\omega, \quad t \in \mathbb{R}
+\]
+
+For a \textbf{multidimensional} signal $x(\underline{r}): \mathbb{R}^D \rightarrow \mathbb{C}$:
+
+\[
+X(\underline{k}) = \int_{-\infty}^{+\infty} x(\underline{r}) e^{-j \langle \underline{k}, \underline{r} \rangle} \ d\underline{r}, \quad \underline{k} \in \mathbb{R}^D \qquad \qquad x(\underline{r}) = \left(\frac{1}{2\pi}\right)^D \int_{-\infty}^{+\infty} X(\underline{k}) e^{j \langle \underline{k}, \underline{r} \rangle} \ d\underline{k}, \quad \underline{r} \in \mathbb{R}^D
+\]
+
+For a \textbf{periodic} signal $x(t): \mathbb{R} \rightarrow \mathbb{C}$ with period $T$:
+
+\[
+X[k] = \int_{-T/2}^{+T/2} x(t) e^{-j \frac{2\pi}{T} kt} \ dt, \quad k \in \mathbb{Z} \qquad \qquad x(t) = \sum_{k = -\infty}^{+\infty} X[k] e^{j \frac{2\pi}{T} kt}, \quad t \in \left[-\frac{T}{2}, \frac{T}{2}\right]
+\]
+
+\subsection{Acoustic Field and Differential Operators}
+
+The acoustic field of a sound scene is described by the pressure $p(\underline{r},t)$ in space $\underline{r} \in \mathbb{R}^3$ and time $t \in \mathbb{R}$.
+The description is independent with respect to the coordinate system.
+
+We use \textbf{differential operators} to describe the acoustic behaviour in space and time.
+We remind the definition of \textbf{gradient} of the 3D scalar acoustic field $ p(\underline{r},t)$ as a vector field $ \nabla p(\underline{r},t)$:
+
+\[
+\underline{r} = 
+\left( x,y,z \right)^T
+\quad \Rightarrow \quad
+\nabla p(\underline{r},t) = 
+\left( \frac{\partial p(\underline{r},t)}{\partial x},
+\frac{\partial p(\underline{r},t)}{\partial y},
+\frac{\partial p(\underline{r},t)}{\partial z} \right)^T
+\]
+
+We remind the definition of \textbf{divergence} of the vector force field $ \underline{F}$ as a scalar field $ \nabla \cdot \underline{F}$:
+
+\[
+\text{div} (\underline{F}) = \nabla \cdot \underline{F} = \frac{\partial F_x}{\partial x} + \frac{\partial F_y}{\partial y} + \frac{\partial F_z}{\partial z}
+\]
+
+We remind the \textbf{Laplace operator} of the 3D scalar acoustic field $ p(\underline{r},t)$ as a scalar field $\nabla^2 p(\underline{r},t)$:
+
+\[
+\nabla^2 p(\underline{r},t) = \nabla \cdot \left(\nabla p(\underline{r},t)\right), \qquad \nabla^2 = \frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial y} + \frac{\partial^2}{\partial z^2} \quad \text{in Cartesian coordinates} \ (x,y,z)
+\]
+
+\subsection{Homogeneous Wave Equation}
+
+An \textbf{homogeneous wave equation} describes the acoustic field in a \textbf{volume free of sound sources}:
+
+\[
+\nabla^2 p(\underline{r},t) - \frac{1}{c^2} \frac{\partial^2 p(\underline{r},t)}{\partial t^2} = 0
+\]
+
+To describe the time-harmonic behaviour of a pressure wave, we express the pressure field \( p(r, t) \) separating the spatial distribution in frequency domain and the time evolution:
+\[
+p(\underline{r}, t) = P(\underline{r}, \omega) e^{-j\omega t}
+\]
+
+This function must satisfy the \textbf{homogeneous Helmholtz equation}:
+\[    
+\nabla^2 P(\underline{r}, \omega) + \left(\frac{\omega}{c}\right)^2 P(\underline{r}, \omega) = 0, \quad \omega: \text{angular frequency [rad/s]}, \quad c: \text{speed of sound [m/s]}
+\]
+
+\subsubsection{Propagating Plane Waves}
+
+A general solution to the homogeneous Helmholtz equation in \textbf{Cartesian coordinates} is:
+\[
+P(\underline{r}, \omega) = e^{j \langle \underline{k}, \underline{r} \rangle}, \quad \underline{k} = [k_x, k_y, k_z]^T: \text{wavenumber vector} \in \mathbb{R}^3
+\]
+
+This solution is valid only if the wavenumber vector satisfies the following \textbf{dispersion relation}:
+\[
+\norm{\underline{k}}^2 = \left(\frac{\omega}{c}\right)^2, \quad \norm{\underline{k}} \ \text{in [rad/m]}
+\]
+
+The \textbf{propagation direction} $\underline{k}$ for planar waves can be expressed by means of the unit vector $\hat{\underline{k}}$:
+
+\[
+\hat{\underline{k}} = \frac{\underline{k}}{\|\underline{k}\|}
+\]
+
+In the 3D space, we can identify points of constant phase:
+\[
+\angle P(r, \omega) = \langle \underline{k}, \underline{r} \rangle = \text{constant} \in \mathbb{R}
+\]
+
+The points with same phase create \textbf{plane waves} orthogonal to the propagation direction $\underline{k}$ (or to the unit vector $\hat{\underline{k}}$ equivalently).
+
+% slide 18
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{Helmholtz solution cartesian.png}
+    \caption{Field of a propagating plane wave - real (left) and imaginary part (right)}
+\end{figure}
+
+No dissipation has been considered so far, so the magnitude remains constant for all the space domain.
+
+% slide 19
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{Helmholtz solution cartesian 2.png}
+    \caption{Field of a propagating plane wave - magnitude (left) and phase (right)}
+\end{figure}
+
+The previous plots are the result of the code script \verb|propagatingPW.m|.
+
+\subsubsection{Evanescent Plane Waves}
+
+\textbf{Evanescent waves} arise when the transverse wavenumber components \( k_x \) and \( k_y \) result in a total wavenumber exceeding the limit set by the dispersion relation.
+The \( z \)-component of the wavenumber vector is:
+
+\[
+k_z^2 = \left(\frac{\omega}{c}\right)^2 - k_x^2 - k_y^2 \quad \Rightarrow \quad
+\begin{cases}
+k_x^2 + k_y^2 \leq \left(\frac{\omega}{c}\right)^2 \Rightarrow k_z \in \mathbb{R}: \text{plane waves} \\
+k_x^2 + k_y^2 > \left(\frac{\omega}{c}\right)^2 \Rightarrow k_z = j\zeta \in \mathbb{C}: \text{evanescent waves} \\
+\end{cases}
+\]
+
+The \textbf{evanescent wave} has a \textbf{decay} term along the $z$-axis, given by the exponential in $\zeta \in \mathbb{R}$:
+
+\[
+P(\underline{r}, \omega) = e^{j(k_x x + k_y y + j \zeta z)} = e^{j(k_x x + k_y y)} e^{-\zeta z}
+\]
+
+% slide 23
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{evanescent decay.png}
+    \caption{Exponential decay $e^{-\zeta z}$ of an evanescent plane wave}
+\end{figure}
+
+The exponential decay makes the magnitude fade out, but the phase keeps the same characteristics of the plane waves.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{evanescent.png}
+    \caption{Field of an evanescent plane wave - real (left) and imaginary part (right)}
+\end{figure}
+% slide 22
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{evanescent 2.png}
+    \caption{Field of an evanescent plane wave - magnitude (left) and phase (right)}
+\end{figure}
+
+The previous plots are the result of the code script \verb|evanescentPW.m|.
+
+\subsection{Helmholtz Equation in Spherical Coordinates}
+
+The \textbf{spherical coordinates} $(r,\theta,\phi)$ and the Cartesian coordinates are related by the following transformations:
+
+\[
+\begin{cases}
+x = r \sin(\theta) \cos(\phi) \\
+y = r \sin(\theta) \sin(\phi) \\
+z = r \cos(\theta)
+\end{cases}, \qquad
+\begin{cases}
+r = \sqrt{x^2 + y^2 + z^2} \\
+\theta = \arccos\left(\frac{z}{r}\right) \\
+\phi = \arctan\left(\frac{y}{x}\right)
+\end{cases}
+\]
+
+The \textbf{Laplace operator} with spherical coordinates becomes:
+
+\[
+\nabla^2 = \frac{1}{r^2} \frac{\partial}{\partial r} \left( r^2 \frac{\partial}{\partial r} \right) + \frac{1}{r^2 \sin (\theta)} \frac{\partial}{\partial \theta} \left( \sin (\theta) \frac{\partial}{\partial \theta} \right) + \frac{1}{r^2 \sin^2 (\theta)} \frac{\partial^2}{\partial \phi^2}
+\]
+
+The \textbf{homogeneous Helmholtz equation} with spherical coordinates in $P$ becomes:
+
+\[
+\frac{1}{r^2} \frac{\partial}{\partial r} \left( r^2 \frac{\partial P}{\partial r} \right) + \frac{1}{r^2 \sin (\theta)} \frac{\partial}{\partial \theta} \left( \sin (\theta) \frac{\partial P}{\partial \theta} \right) + \frac{1}{r^2 \sin^2 (\theta)} \frac{\partial^2 P}{\partial \phi^2} + \left(\frac{\omega}{c}\right)^2 P = 0
+\]
+
+We can consider $P$ \textbf{separable} in the spherical coordinates:
+
+\[
+P(\underline{r}, \omega) = R(r) \Theta(\theta) \Phi(\phi) \quad \Rightarrow \quad
+\frac{1}{r^2} \frac{\partial}{\partial r} \left( r^2 \frac{\partial R}{\partial r} \right) + \frac{1}{r^2 \sin(\theta)} \frac{\partial}{\partial \theta} \left( \sin(\theta) \frac{\partial \Theta}{\partial \theta} \right) + \frac{1}{r^2 \sin^2(\theta)} \frac{\partial^2 \Phi}{\partial \phi^2} + \left(\frac{\omega}{c}\right)^2 R \Theta \Phi = 0
+\]
+
+Regarding the \textbf{azimuthal dependence} $\phi$, the third term isolates as:
+
+\[
+\frac{1}{\Phi} \frac{\partial^2 \Phi}{\partial \phi^2} = -m^2, \quad m \in \mathbb{Z} \quad \Rightarrow \quad \Phi(\phi) = e^{jm\phi}
+\]
+
+Regarding the \textbf{co-elevation dependence}, we obtain the \textbf{associated Legendre equation}:
+
+\[
+\frac{1}{\sin(\theta)} \frac{\partial}{\partial \theta} \left( \sin(\theta) \frac{\partial \Theta}{\partial \theta} \right) + \left[ l(l+1) - \frac{m^2}{\sin^2(\theta)} \right] \Theta = 0
+\]
+
+The Legendre equation solution is given by the \textbf{associated Legendre polynomial} $P_l^m$ of order $l$ and degree $m$:
+
+\[
+\Theta(\theta) = P_l^m(\cos(\theta)), \qquad l=0,1,\cdots \quad m = -l, \cdots, l
+\]
+
+% slide 29
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{Legendre.png}
+    \caption{Associated Legendre polynomials of orders $l=0,1,2$ and positive degrees $m$}
+\end{figure}
+
+We define \textbf{spherical harmonic functions} to express all angular dependencies on $\theta$ and $\phi$:
+\[
+Y_l^m(\theta, \phi) = (-1)^m \sqrt{\frac{(2l + 1)}{4\pi}\frac{(l - |m|)!}{(l + |m|)!}} e^{jm\phi} P_l^{|m|}(\cos(\theta))
+\]
+These functions are orthonormal and form a complete set over the angular domain, satisfying the \textbf{orthonormality condition} (we can consider them as basis function):
+\[
+\int_0^{2\pi} \int_0^{\pi} Y_l^m(\theta, \phi) Y_{l'}^{m'}(\theta, \phi) \sin(\theta) \  d\theta \  d\phi = \delta [l-l'] \delta [m-m']
+\]
+Furthermore spherical harmonics are frequency independent.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{shperical harmonics.png}
+    \caption{Spherical harmonics up to order 3}
+\end{figure}
+In spherical coordinates, the \textbf{radial dependence} in the solution of the Helmholtz equation leads to a differential equation given by:
+\[
+\frac{\partial}{\partial r} \left( r^2 \frac{\partial R(r)}{\partial r} \right) + \left( \frac{\omega}{c} \right)^2 r^2 R(r) - l(l + 1) R(r) = 0
+\]
+
+We can express the solution in terms of \textbf{spherical Bessel functions} of first kind $j_n$ and second kind $y_n$ as:
+\[
+R(r) = R_1 j_l\left( \frac{\omega}{c} r \right) + R_2 y_l\left( \frac{\omega}{c} r \right)
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{spherical bessel.png}
+    \includegraphics[width=0.4\linewidth]{spherical bessel 2.png}
+    \caption{Spherical Bessel function of the $1$-st kind (left) and $2$-nd kind (right) with $n=0,2,4,6$}
+\end{figure}
+
+Alternatively, we may use \textbf{spherical Hankel functions} $h_l$, which are obtained through the Bessel functions as:
+
+\[
+\begin{cases}
+h_l^{(1)}(x) &= j_l(x) + j y_l(x) \\
+h_l^{(2)}(x) &= j_l(x) - j y_l(x)
+\end{cases} \quad \Rightarrow \quad
+R(r) = R_3 h_l^{(1)}\left( \frac{\omega}{c} r \right) + R_4 h_l^{(2)}\left( \frac{\omega}{c} r \right)
+\]
+
+\subsection{Helmholtz Equation in Cylindrical Coordinates}
+
+The \textbf{cylindrical coordinates} ($\rho,\phi,z$) and the spherical coordinates are related by the following transformation:
+
+\[
+\begin{cases}
+\rho = r \sin(\theta): & \text{radial distance} \\
+\phi = \phi: & \text{azimuth} \\
+z = r \cos(\theta): & \text{height}
+\end{cases}
+\]
+
+The \textbf{Laplace operator} with cylindrical coordinates becomes:
+
+\[
+\nabla^2 = \frac{\partial^2}{\partial \rho^2} + \frac{1}{\rho} \frac{\partial}{\partial \rho} + \frac{1}{\rho^2} \frac{\partial^2}{\partial \phi^2} + \frac{\partial^2}{\partial z^2}
+\]
+
+The \textbf{homogeneous Helmholtz equation} in $P$ with cylindrical coordinates becomes:
+
+\[
+\frac{\partial^2 P}{\partial \rho^2} + \frac{1}{\rho} \frac{\partial P}{\partial \rho} + \frac{1}{\rho^2} \frac{\partial^2 P}{\partial \phi^2} + \frac{\partial^2 P}{\partial z^2} + \left(\frac{\omega}{c}\right)^2 P = 0
+\]
+
+We can consider $P$ \textbf{separable} in the cylindrical coordinates:
+
+\[
+P(\underline{r}, \omega) = R(\rho) \Phi(\phi) Z(z) \quad \Rightarrow \quad \frac{\partial^2 R \Phi Z}{\partial \rho^2} + \frac{1}{\rho} \frac{\partial R \Phi Z}{\partial \rho} + \frac{1}{\rho^2} \frac{\partial^2 R \Phi Z}{\partial \phi^2} + \frac{\partial^2 R \Phi Z}{\partial z^2} + \left(\frac{\omega}{c}\right)^2 R \Phi Z = 0
+\]
+
+\[
+\Leftrightarrow \quad \frac{\partial^2 R}{\partial \rho^2} \Phi Z + \frac{1}{\rho} \frac{\partial R}{\partial \rho} \Phi Z + \frac{1}{\rho^2} \frac{\partial^2 \Phi}{\partial \phi^2} R Z + \frac{\partial^2 Z}{\partial z^2} R \Phi + \left(\frac{\omega}{c}\right)^2 R \Phi Z = 0
+\]
+
+Dividing by \( R \Phi Z \):
+
+\[
+\frac{1}{R}\frac{\partial^2 R}{\partial \rho^2} + \frac{1}{\rho R} \frac{\partial R}{\partial \rho} + \frac{1}{\rho^2 \Phi} \frac{\partial^2 \Phi}{\partial \phi^2} + \frac{1}{Z} \frac{\partial^2 Z}{\partial z^2} + \left(\frac{\omega}{c}\right)^2 = 0
+\]
+
+Regarding the \textbf{height dependence} $z$:
+
+\[
+\frac{1}{Z} \frac{\partial^2 Z}{\partial z^2} = -k_z^2 \quad \Rightarrow \quad Z(z) = e^{j k_z z}
+\]
+
+Regarding the remaining terms - substituting $k_z^2$ into the homogeneous Helmholtz equation:
+
+\[
+\frac{1}{R}\frac{\partial^2 R}{\partial \rho^2} + \frac{1}{\rho R} \frac{\partial R}{\partial \rho} + \frac{1}{\rho^2 \Phi} \frac{\partial^2 \Phi}{\partial \phi^2} = \underbrace{- \left(\frac{\omega}{c}\right)^2 + k_z^2}_{-k_\rho^2}
+\]
+
+Multiplying by $\rho^2$:
+
+\[
+\frac{\rho^2}{R} \left( \frac{\partial^2 R}{\partial \rho^2} + \frac{1}{\rho R} \frac{\partial R}{\partial \rho} \right) + k_\rho^2 \rho^2 = - \frac{1}{\Phi} \frac{\partial^2 \Phi}{\partial \phi^2}
+\]
+
+The \textbf{azimuthal dependence} $\phi$ resolves in:
+
+\[
+\frac{1}{\Phi} \frac{\partial^2 \Phi}{\partial \phi^2} = -m^2 \quad \Rightarrow \quad \Phi(\phi) = e^{j m \phi}
+\]
+
+We can express the \textbf{radial dependence} $R$ in terms of \textbf{Bessel functions} of first kind $J_n$ and second kind $Y_n$ as:
+
+\[
+R(\rho) = R_1 J_m(k_\rho \rho) + R_2 Y_m(k_\rho \rho)
+\]
+
+Alternatively, we my use \textbf{Hankel functions} $H_m$, which are obtained through the Bessel functions as:
+
+\[
+\begin{cases}
+H_m^{(1)}(k_p \rho) &= J_m(k_p \rho) + j Y_m(k_p \rho) \\
+H_m^{(2)}(k_p \rho) &= J_m(k_p \rho) - j Y_m(x)
+\end{cases} \quad \Rightarrow \quad
+R(\rho) = R_3 H_m^{(1)}(k_\rho \rho) + R_4 H_m^{(2)}(k_\rho \rho)
+\]
+
+% , the equation separates into three parts. The resulting separated equations are:
+% \begin{itemize}
+%     \item \textbf{Axial Component:}
+%     \[
+%     \frac{1}{Z} \frac{\partial^2 Z}{\partial z^2} = -k_z^2 \quad \Rightarrow \quad Z(z) = e^{j k_z z}
+%     \]
+
+%     \item \textbf{Azimuthal Component:}
+%     \[
+%     \frac{1}{\Phi} \frac{\partial^2 \Phi}{\partial \phi^2} = -m^2 \quad \Rightarrow \quad \Phi(\phi) = e^{j m \phi}
+%     \]
+
+%     \item \textbf{Radial Component:}
+%     \[
+%     \frac{\partial^2 R}{\partial \rho^2} + \frac{1}{\rho} \frac{\partial R}{\partial \rho} + \left( k_\rho^2 - \frac{m^2}{\rho^2} \right) R = 0
+%     \]
+%     The general solution for the radial component can be expressed in terms of Bessel functions as:
+%     \[
+%     R(\rho) = R_1 J_m(k_\rho \rho) + R_2 Y_m(k_\rho \rho)
+%     \]
+%     Alternatively, in terms of Hankel functions:
+%     \[
+%     R(\rho) = R_3 H_m^{(1)}(k_\rho \rho) + R_4 H_m^{(2)}(k_\rho \rho)
+%     \]
+% \end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{bessel.png}
+    \includegraphics[width=0.4\linewidth]{bessel 2.png}
+    \caption{Bessel function of the $1$-st kind (left) and $2$-nd kind (right) with $m=0,1,5,10$}
+\end{figure}
+
+\subsection{Inhomogeneous Wave Equation and Green's Functions}
+
+In a \textbf{volume with source distribution}, the acoustic field must satisfy the \textbf{inhomogeneous wave equation}:
+
+\[
+\nabla^2 p(\underline{r}, t) - \frac{1}{c^2} \frac{\partial^2 p(\underline{r}, t)}{\partial t^2} = -\frac{\partial q(\underline{r}, t)}{\partial t}, \qquad q(\underline{r}, t): \text{flow per unit volume}
+\]
+
+By applying the temporal Fourier transform, the \textbf{inhomogeneous Helmholtz equation} in the frequency domain becomes:  
+
+\[
+\nabla^2 P(\underline{r}, \omega) + \frac{\omega^2}{c^2} P(\underline{r}, \omega) = -j\omega Q(\underline{r}, \omega)
+\]
+
+A common approach to \textbf{solving the Helmholtz equation} involves using \textbf{Green's functions}.
+For a spatio-temporal impulse defined at \( (\underline{r}', t') \), the excitation term is:
+
+\[
+q(\underline{r}, t) = \delta(\underline{r} - \underline{r}') \delta(t - t')
+\]
+
+Under this condition, the solutions to the wave equation and to the Helmholtz equation are:
+
+
+\[
+g(\underline{r} | \underline{r}', t) = \frac{1}{\norm{\underline{r} - \underline{r}'}} \cdot \delta \left(t - \frac{\norm{\underline{r} - \underline{r}'}}{c}\right), \qquad
+G_\text{3D}\left(\underline{r} | \underline{r}', \omega\right) = \frac{e^{-j (\omega/c) \norm{\underline{r} - \underline{r}'}}}{4\pi \norm{\underline{r} - \underline{r}'}}
+\]
+
+The last result is a Green's function in a 3D free-field and represents the sound field in $r$ resulting from a spatial impulse (i.e. \textit{impulse response} of LTI systems) in $r'$.
+It describes the omni-directional radiation of a \textbf{point source} and it can be used to describe any arbitrary solution to the wave equation by means of \textbf{Single Layer Potential} equation, which uses the \textit{source distribution} $D$ information:
+
+\[
+p(\underline{r}, \omega) = \int_{\mathcal{D}} G\left(\underline{r} | \underline{r}', \omega\right) \ D\left(\underline{r}', \omega\right) \ d\underline{r}', \qquad \underline{r}' \in \mathcal{D}
+\]
+
+
+In \textbf{height-invariant scenarios}, where the sound field is \textit{invariant} over planes \textit{parallel to \( xy \) plane}, the excitation function becomes:
+
+\[
+q(\underline{r}, \omega) = \delta(x - x') \delta(y - y'), \qquad z \in \mathbb{R}
+\]
+
+For a \textbf{line source} - which is the superposition of point sources along a straight line parallel to $z$ axis - we obtain the Green's function in 2D by integrating the 3D Green's function for point sources along the $z$ axis:
+
+\[
+G_\text{2D}\left(\underline{r} | \underline{r}', \omega\right) = \int_{\mathbb{R}} G_\text{3D}\left(\underline{r} | \underline{r}', \omega\right) \ dz', \qquad \underline{r}'= \left[ x',y',z' \right]^{T}
+\]
+
+\[
+= \int_{-\infty}^{\infty} \frac{e^{-j (\omega/c) \norm{\underline{r} - \underline{r}'}}}{4\pi \norm{\underline{r} - \underline{r}'}} \ dz' = -\frac{j}{4} H_0^{(2)}((\omega/c)\rho), \qquad 
+\rho = \sqrt{(x - x')^2 + (y - y')^2}
+\]
+
+This result describes the sound field in $r$ radiated by a line source orthogonal to the $xy$ plane and depends only on the distance $\norm{\underline{r} - \underline{r}'}$ between measurement point and line source position $r'$.
+Assuming that the acoustic field is independent with respect to one spatial coordinate is very useful to simplify complex 3D problems.
+
+In real life, the sound field of a point source can be approximately generated by a \textit{closed-cabinet single-driver loudspeaker}, while the line source is not that easy to obtain.
+Let us see if a point source radiation can approximate the sound field of a line source.
+The Green's function of a point source located on the $xy$ plane, evaluated on the same plane, is:
+
+\[
+\underline{r} = [x,y,0]^T, \qquad \underline{r}' = [x',y',0]^T
+\quad \Rightarrow \quad
+G_\text{3D}\left(\underline{r} | \underline{r}', \omega\right) = \frac{1}{4\pi \rho} e^{-j \frac{\omega}{c} \rho}
+\]
+
+Considering the far-field approximation on the 2D Green's function - applying a large argument approximation of the Hankel function:
+
+\[
+G_\text{2D}\left(\underline{r} | \underline{r}', \omega\right) \approx \frac{1}{\sqrt{8\pi (\omega/c) \rho}} e^{-j \frac{\omega}{c} \rho}
+\]
+
+We can notice that the 2D far-field approximation is similar to the 3D point source expression, having in common the term $e^{-j (\omega/c) \rho}$.
+So, we can express the line source approximation by adjusting the point source Green's function:
+
+\[
+G_\text{2D}(\rho, \omega) = H(\omega) A(\rho) \ G_\text{3D}(\rho, \omega), \qquad H(\omega) = \sqrt{\frac{c}{j \omega}}, \qquad A(\rho) = \sqrt{\frac{1}{2\pi \rho}}
+\]
+
+In order to approximate the sound field radiated from a line source, using a single point source located at the root position,  it is necessary some adjustments.
+The \textbf{spectral shaping} $H(\omega)$ describes the low-pass effect that the approximation applies on the original spectrum - it can be compensated.
+The \textbf{amplitude modification} $A(\rho)$ takes into account the different amplitude decay we observe in point sources (factor $1/\rho$) and line sources (factor $1/\sqrt{\rho}$).
+
+The comparison between point and line sources provides essential insights about amplitude decay rates and spectral characteristics, guiding practical acoustic implementations and wave propagation analysis.
+
+\subsection{Boundary Conditions} 
+
+\textbf{Boundary conditions} are fundamental in solving the wave equation and can be classified as homogeneous or inhomogeneous.
+\textbf{Homogeneous} boundary conditions describe stationary boundaries, where the sound field vanishes or remains constant.
+In contrast, \textbf{inhomogeneous} boundary conditions are used to represent boundaries that react to external influences. 
+
+The \textbf{Dirichlet} boundary condition describes the \textbf{pressure value} on the boundary $\partial \mathcal{V}$, which can be zero (homogeneous condition, \textit{soft sound}) or not (inhomogeneous condition, \textit{hard sound}):
+
+\[ p(\underline{r}, \omega) = 0 \quad \text{or} \quad p(\underline{r}, \omega) = f(\underline{r}, \omega), \qquad \forall \underline{r} \in \partial \mathcal{V} \]
+
+The \textbf{Neumann} boundary condition describes the \textbf{pressure normal derivative} value with respect to the boundary $\partial \mathcal{V}$, which can be zero (homogeneous condition) or not (inhomogeneous condition):
+
+
+\[ \langle \nabla p(\underline{r}, \omega), \hat{\underline{\mathrm{n}}}(\underline{r}) \rangle = 0 \quad \text{or} \quad \langle \nabla p(\underline{r}, \omega), \hat{\underline{\mathrm{n}}}(\underline{r}) \rangle = f(\underline{r}, \omega), \qquad \forall \underline{r} \in \partial \mathcal{V} \]
+
+Lastly, the \textbf{Sommerfeld} radiation condition addresses the behaviour of the sound field at infinity, ensuring that no energy contribution is originated at \( r \to +\infty \):
+
+\[ \lim_{r \to +\infty} r \left( \frac{\partial p(\underline{r}, \omega)}{\partial r} + j \frac{\omega}{c} p(\underline{r}, \omega) \right) = 0 \]
+
+This condition is particularly relevant in exterior problems where we seek to model the propagation of sound waves to infinity without artificial reflections.
+
+\subsection{Kirchhoff-Helmholtz Integral}
+
+\textbf{The Kirchhoff-Helmholtz integral} provides a way to express the sound field \( p(\underline{r}, \omega) \) in a volume $\mathcal{V}$ in terms of surface integrals over the boundary \( \partial \mathcal{V} \):
+
+\[
+a(\underline{r})p(\underline{r}, \omega) = - \oint_{\partial \mathcal{V}} \left[ G(\underline{r} | \underline{r}', \omega) \langle \nabla p(\underline{r}', \omega), \hat{\underline{\mathrm{n}}}(\underline{r}') \rangle \Big|_{\underline{r} = \underline{r}'} - p(\underline{r}', \omega) \langle \nabla G(\underline{r} | \underline{r}', \omega), \hat{\underline{\mathrm{n}}}(\underline{r}') \rangle \right] dA(\underline{r}')
+\]
+
+The term \( a(r) \) is a discrimination term defined as:
+
+\[
+a(\underline{r}) =
+\begin{cases}
+1, & \underline{r} \in \mathcal{V} \\
+1/2, & \underline{r} \in \partial \mathcal{V} \\
+0, & \text{for } \underline{r} \text{ outside } \mathcal{V}
+\end{cases}
+\]
+
+The sound field is evaluated at position $\underline{r}$ and its sources are located on the boundary (i.e. \( \underline{r}' \in \partial \mathcal{V} \)).
+
+The sound field within the volume \( \mathcal{V} \) is uniquely determined by the sound pressure on the boundary \( \partial \mathcal{V} \) and its gradient in the direction normal to the boundary.
+This formulation is essential in boundary element methods for acoustic problems.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{kirchhoff helmholtz integral.png}
+    \caption{Geometry of the Kirchhoff-Helmholtz integral}
+\end{figure}
+
+\clearpage
+
+
+\clearpage

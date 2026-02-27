@@ -1,0 +1,88 @@
+%----------------------
+% Font
+%----------------------
+\usepackage{charter}       % Charter font 
+
+%----------------------
+% Language and layout
+%----------------------
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[a4paper,top=2cm,bottom=2cm,left=2cm,right=2cm,marginparwidth=1.75cm]{geometry} % Page size
+
+%----------------------
+% Packages for math and symbols
+%----------------------
+\usepackage{mathrsfs,amsmath,amssymb,amsthm}
+\usepackage{physics}   % Physics macros
+\usepackage{cancel}    % Cancel terms in equations
+
+%----------------------
+% Theorem environments
+%----------------------
+\renewcommand{\qedsymbol}{$\blacksquare$} % Proof end symbol
+
+%----------------------
+% Graphics and layout
+%----------------------
+\usepackage{graphicx,float,subcaption}
+\graphicspath{{images/}}    % Custom folder for images
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{parskip}      % Space between paragraphs
+\usepackage{multicol}     % Multiple columns
+\usepackage{enumitem}     % Custom itemize/enumerate
+\usepackage{siunitx}      % SI units
+
+%----------------------
+% Hyperlinks
+%----------------------
+\usepackage[colorlinks=true, allcolors=black]{hyperref}
+
+%----------------------
+% Colored boxes
+%----------------------
+\usepackage[most]{tcolorbox}
+
+%----------------------
+% Header and footer
+%----------------------
+\usepackage{fancyhdr}
+\fancypagestyle{fancy}{
+  \fancyhead{}
+  \fancyhead[LO]{\textsc{Section \rightmark}}
+  \fancyhead[RE]{\textsc{Chapter \leftmark}}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\footrulewidth}{0.4pt}
+}
+\pagestyle{fancy}
+
+\fancypagestyle{nohead}{
+  \fancyhead{} % Remove header
+  \fancyfoot{}
+  \fancyfoot[C]{\thepage} % Keep footer centered
+}
+
+%----------------------
+% Custom formatting
+%---------------------
+\usepackage{setspace}
+\setstretch{1.2}        
+\parindent 0
+% \renewcommand{\baselinestretch}{1.2}
+\parskip
+
+% Equation/table/figure numbering per subsection
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+
+%----------------------
+% Custom macros
+%----------------------
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\sinc}{sinc}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\usepackage[numbers]{natbib} % Optional: Better citation formatting

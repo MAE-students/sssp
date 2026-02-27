@@ -1,0 +1,829 @@
+\section{Digital Audio Effects}
+\subsection{Introduction}
+\textbf{Digital audio effects} refer to any transformation applied to sound signals using digital signal processing techniques.
+The term combines three key aspects: \textit{digital} highlights that the processing is performed using discrete-time algorithms on sampled signals; \textit{audio} specifies that the subject is sound within the human hearing range; and \textit{effects} denotes intentional modifications introduced to alter or enhance the original sound.
+
+The most common types of digital audio effects can be grouped into three main categories:
+
+\begin{itemize}
+    \item \textbf{Audio equalizers}
+    \item \textbf{Integer and fractional delay filters}
+    \item \textbf{Delay-based effects} 
+\end{itemize}
+
+
+\subsection{Audio equalization} 
+
+\textbf{Audio equalization} refers to the process of changing the frequency response of a sound system through the use of \textbf{linear filters}.
+This operation allows us to shape the tonal balance of audio signals by emphasizing or attenuating specific frequency bands.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Why Do We Use Equalization?}]
+
+Equalization plays a key role throughout the entire \textit{audio chain} - from the recording studio to the final playback.
+For instance, it can be used to \textit{improve} the sound of an instrument, adjust \textit{bass} and \textit{treble} in consumer audio systems, or flatten the \textit{frequency response of loudspeakers} to ensure more accurate sound reproduction.
+It is also fundamental in designing \textit{crossover networks} in multi-driver loudspeaker systems, where each driver is driven by a specific frequency range.
+Moreover, equalization helps correct issues caused by the \textit{acoustic characteristics} of the listening \textit{environment}, such as resonances or absorption. 
+
+\end{tcolorbox}
+
+\subsubsection{Filter Classification}
+
+\textbf{Filters} are essential tools in digital audio processing, as they allow us to shape or manipulate the spectral content of a signal by attenuating or amplifying specific frequency ranges.
+Depending on how they affect the spectrum (i.e. \textit{filter frequency response}), filters can be classified into several main types:
+
+\begin{itemize}
+    \item \textbf{Low-pass filters} cut frequencies higher than a given cutoff frequency \( f_c \), allowing only low frequencies to pass through.
+
+    \item \textbf{Highpass filters} do the opposite: they attenuate frequencies lower than the cutoff frequency \( f_c \), letting high-frequency components remain.
+
+    \item \textbf{Bandpass filters} allow frequencies within a specific range - between two cutoff frequencies \( [f_{cl}, f_{ch}] \) - to pass, while attenuating everything outside this band.
+
+    \item \textbf{Bandreject filters} (also called \textit{bandstop filters}) cut the frequencies inside a defined range \( [f_{cl}, f_{ch}] \), while letting the rest of the spectrum through.
+
+    \item \textbf{Notch filters} are a special case of bandreject filters, where the attenuated band is very narrow and centered around a frequency \( f_c \). They are useful for removing specific unwanted components such as electrical hum.
+
+    \item \textbf{Resonators} amplify a narrow range of frequencies around a center frequency \( f_c \), producing a peak in the frequency response.
+
+    \item \textbf{Allpass filters}, unlike the others, do not change the magnitude of the frequency spectrum, but instead affect the phase response. They are often used in phase correction and delay-based effects.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{immagine1.png}
+    \caption{Filters classification by frequency response $|H(f)|$}
+\end{figure}
+
+\subsubsection{Shelving and Peaking Filters}
+
+Another difference we make is between \textit{shelving and peaking filters}: they are commonly used in audio equalization to apply smooth gain adjustments across specific frequency regions without introducing a complete stop band.
+
+\textbf{Shelving filters} are built by combining a low-pass or highpass filter with a direct path. They are typically used to boost or attenuate all frequencies below or above a certain cutoff frequency.
+These filters are characterized by two main parameters: the cutoff frequency and the gain factor.
+
+\textbf{Peaking filters}, on the other hand, are based on bandpass filter structures combined with a direct path.
+They are designed to boost or attenuate a narrow band of frequencies centered around a specific frequency.
+Their behaviour is defined by the center frequency, the bandwidth and the gain factor.
+
+Unlike classical filters, both shelving and peaking filters \textbf{do not exhibit a complete stop band}, but rather apply smooth tonal adjustments. Indeed, this comes from the “direct path” that consists of a parallel branch in the filter structure that carries the input signal unchanged (or with a fixed gain) straight through to the output, bypassing the frequency-shaping network.
+
+\subsubsection{Equalizer Structure}
+
+A typical \textbf{parametric equalizer} is composed of a cascade of filters, each centered around a specific moveable cutoff frequency to shape the overall frequency response of the system in the entire audio range.
+
+The structure generally includes:
+\begin{itemize}
+    \item a \textbf{low-frequency shelving filter}, which adjusts the gain in the low-end of the spectrum;
+    \item one or more \textbf{peaking filters}, centered around specific mid-range frequencies, used to boost or cut narrow frequency bands;
+    \item a \textbf{high-frequency shelving filter}, applied to control the gain in the high-end of the spectrum.
+\end{itemize}
+
+Each filter is parametrized by its \textbf{frequency} (cut-off frequency for shelving, center frequency for peaking), \textbf{gain} in dB, and \textbf{bandwidth} (or alternatively \textit{quality factor}) for peaking filters only. Note that shelving responses are sometimes described by a shelf “slope” or transition-width parameter that specifies the spectral roll-off rate.
+The combination of these filters allows precise and flexible control over the timbral balance of the sound.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{immagisdsfne.png}
+    \caption{Parametric equalizer structure: block diagram and frequency responses}
+\end{figure}
+
+
+\subsubsection{First-Order Shelving Filters}
+
+A \textbf{first-order shelving filter} is one of the simplest structures used in audio equalization, to apply either a low-frequency or high-frequency gain adjustment.
+Its design is based on the combination of an \textbf{allpass filter} $A(z)$ with a direct path and a frequency-dependent gain term.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{immagineds.png}
+    \caption{Block diagram of a first-order shelving filter}
+\end{figure}
+
+The \textbf{transfer function} of the shelving filter is defined as:
+\[
+H(z) = 1 + \frac{H_0}{2} \left[1 \pm A(z) \right]
+\]
+The constant \( H_0 \) represents the gain factor in the linear scale, while the \( \pm \) sign determines whether the filter behaves as a low-shelf (+) or high-shelf (-) filter.
+The filter \( A(z) \) is a \textbf{first-order} allpass filter, defined as:
+\[
+A(z) = \frac{a + z^{-1}}{1 + a z^{-1}}
+\]
+This filter $A(z)$ introduces a \textbf{phase shift} without affecting the magnitude response on its own (\textit{definition of allpass filter}).
+When combined with the direct signal path, it shapes the magnitude response according to the shelving behaviour.
+In fact, the \textbf{magnitude} of \( A(z) \) is constant for all frequencies, while its \textbf{phase} response ranges from \( 0^\circ \) at low frequencies to \( -180^\circ \) at high frequencies.
+
+The gain \( G_{\text{dB}} \) applied by a shelving filter is first converted into a linear scale using:
+\[
+V_0 = 10^{G_{\text{dB}}/20}, \qquad H_0 = V_0 - 1
+\]
+The parameter \( a \) in the allpass structure is computed differently depending on the shelving type (low or high frequency) and whether the desired gain is positive or negative.
+
+\textbf{Low-frequency shelving} (cutoff \( \Omega_c = 2\pi f_c / F_s \))
+\[
+a = 
+\begin{cases}
+\displaystyle \frac{\tan(\Omega_c/2) - 1}{\tan(\Omega_c/2) + 1}, & \mathrm{ if }  \ G_{\text{dB}} \ge 0\\[0.8em]
+\displaystyle \frac{\tan(\Omega_c/2) - V_0}{\tan(\Omega_c/2) + V_0}, & \mathrm{ if } \  G_{\text{dB}} < 0
+\end{cases}
+\]
+\textbf{High-frequency shelving} (cutoff \( \Omega_c = 2\pi f_c / F_s \))
+\[
+a = 
+\begin{cases}
+\displaystyle \frac{\tan(\Omega_c/2) - 1}{\tan(\Omega_c/2) + 1}, & \mathrm{ if } \ G_{\text{dB}} \ge 0\\[1.2em]
+\displaystyle \frac{V_0\ \tan(\Omega_c/2) - 1}{V_0\ \tan(\Omega_c/2) + 1}, & \mathrm{ if} \  G_{\text{dB}} < 0
+\end{cases}
+\]
+These expressions ensure correct shelving behaviour depending on the desired gain and cutoff frequency. The formulas for \( a \) define how the first-order allpass filter should be configured to obtain the correct shelving effect.
+
+% Figure~\ref{fig:shelving_results} shows the frequency responses obtained from simulating a first-order low-frequency shelving filter in MATLAB.
+
+% On the left, the filter applies a \textbf{boost} of \( G_{\text{dB}} = +20 \) dB in the low-frequency region. On the right, a \textbf{cut} of \( G_{\text{dB}} = -20 \) dB is applied. In both cases, the cutoff frequency is set to \( f_c = 100\\text{Hz} \) and the response follows the theoretical shape defined by the coefficient equations presented earlier.
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.35\linewidth]{lF_Shelving_boost.png}
+% \includegraphics[width=0.35\linewidth]{lF_Shelving_cut.png}
+%     \caption{Low-frequency shelving filter with \( f_c = 100\\text{Hz} \). (a) Boost with \( G_{\text{dB}} = +20 \\text{dB} \), (b) Cut with \( G_{\text{dB}} = -20 \\text{dB} \). Generated using \texttt{firstOrderShelving.m}.}
+%     \label{fig:shelving_results}
+% \end{figure}
+
+\clearpage 
+The following shelving filters are the result of the code script \texttt{firstOrderShelving.m}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{low_shelving.png}
+    \includegraphics[width=0.5\linewidth]{high_shelving.png}
+    \caption{Low-shelving boost/cut at $f_c=100$ Hz (top), high-shelving boost/cut at $f_c=1$ KHz (bottom)}
+\end{figure}
+
+\subsubsection{Second-Order Peak Filters}
+
+\textbf{Second-order peak filters} are used to boost or cut a narrow frequency band around a center frequency.
+Their structure is based on the use of an \textbf{allpass filter} $A_2(z)$ embedded in a feedback path.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{second_order_peak.png}
+    % \caption{Block diagram of a second-order peak filter. From \cite{yourreference}, Fig.~2.22, p.~54.}
+    \caption{Block diagram of a second-order peak filter}
+\end{figure}
+
+The \textbf{transfer function} of the filter is defined as:
+\[
+H(z) = 1 + \frac{H_0}{2} \left[1 - A_2(z)\right]
+\]
+The constant \( H_0 \) is the gain factor controlling the amplitude of the peak or dip, while \( A_2(z) \) is a \textbf{second-order} allpass filter, defined as:
+\[
+A_2(z) = \frac{-a + d(1-a)z^{-1} + z^{-2}}{1 + d(1-a)z^{-1} - a z^{-2}}
+\]
+
+The filter $H(z)$ selectively modifies the magnitude response around the \textbf{center frequency} defined by the parameters \( a \) and \( d \), while \textbf{preserving phase symmetry} due to the allpass structure.
+
+The gain \( G_{\text{dB}} \) for second-order peak filters is converted to a linear scale using:
+\[
+V_0 = 10^{G_{\text{dB}}/20}, \qquad H_0 = V_0 - 1
+\]
+The parameter \( d \), which defines the center frequency, is given by:
+\[
+\Omega_c = \frac{2\pi f_c}{F_s}, \qquad d = -\cos(\Omega_c)
+\]
+\clearpage
+The coefficient \( a \), which controls the bandwidth of the peak, depends on whether the gain is positive or negative and is computed using:
+
+\[
+\Omega_b = \frac{2\pi f_b}{F_s}, \qquad
+a =
+\begin{cases}
+\displaystyle \frac{\tan(\Omega_b/2) - 1}{\tan(\Omega_b/2) + 1}, & \text{if } G_{\text{dB}} \geq 0 \\
+\displaystyle \frac{\tan(\Omega_b/2) - V_0}{\tan(\Omega_b/2) + V_0}, & \text{if } G_{\text{dB}} < 0
+\end{cases}
+\]
+
+We observe that the expression for the $a$ parameter in the peak filter is similar to the one used for the $a$ parameter in the (first-order) low-pass shelving filters. These parameters define the second-order allpass filter \( A_2(z) \) that is used to shape the peak or dip in the frequency response, centered around \( f_c \) with bandwidth \( f_b \).
+
+The following peaking filters are the result of the code script \texttt{secondOrderPeaking}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{peak filter.png}
+    \caption{Peak filter, $f_c=600$ Hz, $f_b=100$ Hz}
+\end{figure}
+
+\subsection{Integer and Fractional Delay Filters}
+An \textbf{ideal delay} in \textbf{continuous time} is defined as a simple time shift of the input signal:
+\[
+y(t) = x(t - \tau), \qquad \tau: \text{delay [s]}
+\]
+In \textit{discrete-time} systems, the continuous time axis $t$ becomes an integer indexing $n = t \cdot F_s$ and the ideal delay expression becomes:
+
+\[
+y(n) = x(n - D), \qquad D \in \mathbb{N}: \text{delay [samples]}
+\]
+
+The equation above accurately models \textbf{integer delays} (and strictly holds for $D \in \mathbb{N}$ only), but many practical applications require \textbf{non-integer delays}, where \( D \) is expressed as:
+
+\[
+D = \lfloor D \rfloor + d, \qquad \lfloor D \rfloor \in \mathbb{N} \ \text{(floor)}, \qquad d \in \mathbb{R}, \qquad 0 < d < 1
+\]
+
+When $D \notin \mathbb{N}$, we want to access the signal in an \textit{uncertain position between two given discrete-time samples}: we need the compute the exact value via \textbf{bandlimited interpolation}.
+
+A useful perspective is to interpret the fractional delay as a \textbf{resampling} problem: we go back to the continuous-time signal (bandlimited), we shift it ($t_\text{SHIFT} = d/F_s$ seconds), then we sample the signal again.
+The choice of $t_\text{SHIFT}$ allows to make a specific time instant value accessible when sampling - which before was not directly accessible.
+
+It is now of interest to express the entire process of fractional delay by means of \textbf{linear filtering}.
+
+\clearpage
+
+\subsubsection{Ideal Delay}
+
+An \textbf{ideal delay in discrete time} can be described by the following \textbf{frequency response} (delay $D$ in samples as before):
+\[
+H_{\text{id}}(\omega) = e^{-i\omega D}, \qquad \omega = \frac{2\pi f}{F_s}: \ \text{normalized angular frequency [rad]}
+\]
+This expression represents a \textbf{pure phase shift}, with the following properties:
+\[
+\abs{H_\text{id}(\omega)} = 1 \ \text{(constant in frequency)}, \qquad \angle{H_\text{id}(\omega)} = -D\omega \ \text{(linear phase)}
+\]
+Delays in the frequency domain can also be characterized by \textbf{group delay} $\tau_g$ and \textbf{phase delay} $\tau_p$:
+\[
+\tau_g(\omega) = -\frac{\partial \angle H_\text{id}(\omega)}{\partial \omega}, \qquad \tau_p(\omega) = -\frac{\angle H_\text{id}(\omega)}{\omega}
+\]
+Phase delay represents the delay of a single pure tone at frequency $\omega$, while group delay represents the delay of a narrowband packet or envelope centered at $\omega$. For an \textbf{ideal} delay filter, both group and phase delay are constant and equal to the delay amount:
+\[
+\tau_{g,\text{id}} = \tau_{p,\text{id}} = D
+\]
+This confirms that an ideal delay corresponds to a linear phase system with \textbf{constant delay across all frequencies}.
+
+A discrete-time all-pass filter with \textbf{linear phase} and \textbf{unit magnitude response}, ensuring a constant group delay equal to \( D \) for all frequencies.
+
+To obtain the corresponding \textbf{impulse response}, we compute the \textit{Inverse Discrete-Time Fourier Transform (IDTFT)}:
+
+\[
+H_\text{id}(\omega) \quad \overset{\mathscr{F}^{-1}}{\longrightarrow} \quad
+h_{\text{id}}(n) = \frac{1}{2\pi} \int_{-\pi}^{\pi} e^{-i\omega D} e^{i\omega n} \ d\omega = \sinc(n - D), \qquad \sinc (n) = \frac{\sin(\pi n)}{\pi n}
+\]
+
+Two cases arise:
+\[ \begin{cases}
+    \text{Integer delay:} & D \in \mathbb{N} \quad \Rightarrow \quad h_{\text{id}}(n) = \delta(n - D) \\
+    \text{Non-integer delay:} & D \notin \mathbb{N} \quad \Rightarrow \quad h_{\text{id}}(n) = \sinc(n - D) \\
+\end{cases} \]
+
+Although the ideal fractional delay filter provides perfect theoretical characteristics, it presents \textbf{two fundamental limitations} in practice: the impulse response is \textbf{infinitely long} and \textbf{non-causal} - which means $h(n)$ is defined also for $n<0$ -  making it impossible to be implemented in real-time systems (only causal finite filters can be implemented).
+
+This ideal solution sets a theoretical benchmark, but in practical applications we need implementable approximations. A widely adopted strategy consists in using \textit{finite-length filters} (FIR) that emulate the ideal $\sinc$ behaviour.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{ideal delay IR.png}
+    \includegraphics[width=0.45\linewidth]{ideal fractional delay IR.png}
+    \caption{Ideal delay IRs - integer (left) and fractional delay (right)}
+\end{figure}
+
+\clearpage
+
+\subsubsection{FIR Approximation}
+To overcome the practical limitations of the ideal fractional delay filter, we can approximate it using a \textbf{Finite Impulse Response (FIR)} filter.
+The general form of a FIR filter of order \( N \) in the \( z \)-domain is:
+\[
+H(z) = \sum_{n=0}^{N} h(n) \cdot z^{-n}
+\]
+Our goal is to determine the coefficients \( h(n) \) so that the filter approximates the ideal impulse response \( h_{\text{id}}(n) \). This is done by \textbf{minimizing the error} $E$ between the \textbf{desired} frequency response $H_\text{id}$ (ideal fractional delay filter) and the \textbf{approximated} one $H$ (FIR filter):
+
+\[
+E(\omega) = H(\omega) - H_{\text{id}}(\omega)
+\]
+
+Several design methods have been developed to achieve FIR approximation, including:
+\begin{itemize}
+    \item \textbf{Least squares design}
+    \item \textbf{Windowing methods}
+    \item \textbf{GLS (Generalized Least Squares) method}
+    \item \textbf{Lagrange interpolation}
+\end{itemize}
+
+% \begin{tcolorbox}[colback=black!5!white, colframe=black, title=\textbf{Ideal Fractional Delay Filter}]
+% An ideal fractional delay filter should satisfy:
+% \begin{itemize}
+%     \item \textbf{Constant amplitude response:} $\left| H(e^{j\omega}) \right| = 1$ for all $\omega$
+%     \item \textbf{Linear phase response:} $\angle H(e^{j\omega}) = -\omega D$, which implies constant phase delay:
+%     \[
+%     \tau(\omega) = -\frac{d}{d\omega} \angle H(e^{j\omega}) = D
+%     \]
+% \end{itemize}
+% \end{tcolorbox}
+
+\subsubsection{Least-Squares FIR Design}
+A straightforward method to design a FIR filter that approximates the ideal fractional delay is the \textbf{least-squares approach}. The goal is to minimize the \textit{squared \( L^2 \)-norm} of the \textit{error function (MSE)} between the desired frequency response \( H_{\text{id}}(\omega) \) and the approximated one \( H(\omega) \):
+
+\[
+\norm{E(\omega)}_{L_2}^{2} = \frac{1}{2\pi} \int_{-\pi}^{\pi} \abs{E(\omega)}^2 \ d\omega = \frac{1}{2\pi} \int_{-\pi}^{\pi} \abs{H(\omega) - H_{\text{id}}(\omega)}^2 \ d\omega
+\]
+
+Thanks to \textbf{Parseval's theorem}, this expression can be translated into the time domain as:
+
+\[
+\norm{E(\omega)}_{L_2}^{2} = \sum_{n=-\infty}^{\infty} \abs{h(n) - h_{\text{id}}(n)}^2 
+= \sum_{n=-\infty}^{\infty} \left[h^2(n) + h_{\text{id}}^2(n) - 2 \ h(n) \cdot h_{\text{id}}(n)\right]
+\]
+
+According to Parseval’s theorem, the second term in the time-domain error expression involves the squared norm of the ideal impulse response \( h_{\text{id}}(n) \), which can be computed analytically:
+
+\[
+\sum_{n=-\infty}^{\infty} \abs{h_{\text{id}}(n)}^2 = \frac{1}{2\pi} \int_{-\pi}^{\pi} \abs{H_{\text{id}}(\omega)}^2 \ d\omega 
+= \frac{1}{2\pi} \int_{-\pi}^{\pi} \abs{e^{-i\omega D}}^2 \ d\omega = 1
+\]
+
+The remaining terms depend on the actual \textit{FIR filter coefficients} $h(n)$.
+By truncating the \textit{infinite summation} to a \textit{finite support} of order \( N \), the squared error becomes:
+
+\[
+h_\text{id}(n) = \sinc(n-D) \quad \Rightarrow \quad
+\norm{E(\omega)}_{L_2}^{2} = 1 + \sum_{n=0}^{N} \left[ h^2(n) - 2h(n) \cdot \text{sinc}(n - D) \right]
+\]
+
+The goal of the Least-Squares filter design is to \textbf{minimize} $ \norm{E(\omega)}_{L_2}^2 $ by properly selecting the \textbf{filter coefficients} $h(n)$: the optimal solution is obtained by selecting \( N + 1 \) coefficients that are \textbf{truncated symmetrically} around the main lobe of the ideal impulse response \( h_{\text{id}}(n) \). 
+Thus, the impulse response of the Least-Squares (LS) fractional delay FIR filter is given by:
+\[
+h(n) = 
+\begin{cases}
+\text{sinc}(n - D), & \text{for } 0 \leq n \leq N \\
+0, & \text{otherwise}
+\end{cases}
+\]
+
+To ensure \textbf{symmetry} and \textbf{optimal approximation}, the choice of the \textbf{filter order} \( N \) must satisfy specific conditions based on the given value of the delay \( D \) (so that the $\sinc$ peak is actually at the center of the support):
+
+\[ \begin{cases}
+    N \ \text{even} & \Rightarrow \quad \text{round}(D) - \frac{N}{2} = 0 \\
+    N \ \text{odd} & \Rightarrow \quad \lfloor D \rfloor - \frac{N - 1}{2} = 0
+\end{cases} \]
+
+Although the least-squares solution provides an intuitive and mathematically optimal approximation in the \( L^2 \)-norm sense, the resulting approximation error can be expressed as:
+\[
+\norm{E(\omega)}_{L_2}^{2} = \sum_{n=-\infty}^{-1} \abs{ h_{\text{id}}(n) }^2 + \sum_{n=N+1}^{\infty} \abs{ h_{\text{id}}(n) }^2
+\]
+This formulation shows that the error is entirely outside the truncation window \([0, N]\), due to the ideal impulse response.
+However, this solution suffers from the well-known \textbf{Gibbs phenomenon}, which introduces undesired ripples in the magnitude response and positive gain values (in dB) for some frequencies in band (where ideally we have 0 dB).
+Positive gain values may cause \textbf{instability} in feedback-based systems.
+
+The following figure plots the frequency response $H(\omega)$ of a LS FIR filter of $3^\text{rd}$ order, for 11 different fractional delay values (between 1 and 2):
+
+\begin{figure}[H]
+    \centering 
+    \includegraphics[width=0.47\linewidth]{magnitude_phase_ls_fir.png}
+    \includegraphics[width=0.47\linewidth]{magnitude_phase_ls_fir_2.png}
+    \caption{Least-Square FIR - magnitude (left) and phase response (right)}
+\end{figure}
+
+The truncation of the ideal impulse response introduces visible \textbf{distortions}, particularly near the Nyquist frequency (normalized frequency equal to 0.5): the phase delay is not constant in frequency, which means different frequency contributions will be delayed differently (i.e. distortion).
+The error increases with increasing frequencies and larger fractional delays.
+
+These limitations motivate the exploration of alternative design techniques for fractional delay filters that mitigate the Gibbs phenomenon.
+
+\subsubsection{Windowing Methods}
+An effective strategy for reducing the Gibbs phenomenon observed in least-squares FIR design is to apply a \textbf{window function} \( w \) other than the rectangular one. The idea is to multiply the ideal impulse response by a window centered around the fractional delay \( D \), resulting in:
+\[
+h(n) = 
+\begin{cases}
+w(n - D) \cdot \sinc(n - D), & \text{for } 0 \leq n \leq N \\
+0, & \text{otherwise}
+\end{cases}
+\]
+The window function \( w \) has length \( N+1 \) samples and is shifted by \( D \), so that it remains symmetric with respect to the center of the shifted sinc function.
+Popular windowing function that can be delayed by fractional values include \textit{Hamming} window.
+While this approach improves the \textbf{smoothness} of the response, it typically yields a \textbf{higher} \( L^2 \)-norm \textbf{error} compared to the LS solution. Difficult to control magnitude error by adjusting window parameters.
+
+% \clearpage
+
+\subsubsection{GLS Methods}
+The \textbf{General Least Squares (GLS)} approach provides an alternative way to approximate the frequency response of a fractional delay using a FIR filter.
+Unlike the windowing method, which modifies the time-domain impulse response, the GLS methods apply a \textbf{weighting function} $W(\omega)$ directly \textbf{in the frequency domain} to minimize a weighted error.
+
+The squared \( L_2 \)-norm of the error is now defined as:
+
+\[
+\norm{E(\omega)}_{L_2}^{2} = \frac{1}{2\pi} \int_{-\alpha\pi}^{\alpha\pi} W(\omega) |E(\omega)|^2 \ d\omega = \frac{1}{2\pi} \int_{-\alpha\pi}^{\alpha\pi} W(\omega) |H(\omega) - H_{\mathrm{id}}(\omega)|^2 \ d\omega, \qquad \alpha \in \left]0,1\right[
+\]
+
+The weighting function \( W(\omega) \) is a frequency-domain window that \textbf{emphasizes} or \textbf{suppresses error contributions} over specific frequency regions - typically it is a low-pass with band \( \left[-\alpha\pi, \alpha\pi\right] \).
+This technique allows an advanced filter design, adjusting the accuracy across frequency bands and improving performances in the most critical frequency ranges.
+
+The following figure plots the frequency response $H(\omega)$ of a GLS FIR filter of $3^\text{rd}$ order, for 11 different fractional delay values (from 1 to 2):
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\linewidth]{gls_response.png}
+    \includegraphics[width=0.47\linewidth]{gls_response_2.png}
+    \caption{General Least-Square FIR - magnitude (left) and phase response (right), $\alpha=0.5$}
+    % \caption{Magnitude responses (top) and phase delay curves (bottom) of a third-order Windowed FIR filter with \(\alpha = 0.5\). The curves are plotted for 11 fractional delay values from 1 to 2.}
+\end{figure}
+
+\subsubsection{Lagrange Interpolation}
+The \textbf{Lagrange method} designs the FIR filter by making the error function maximally flat around \(\omega_0 = 0\).
+This is achieved by forcing the first \(N+1\) derivatives of the error function to vanish:
+\[
+    \left. \frac{d^l E(\omega)}{d\omega^l} \right|_{\omega = \omega_0} = 0, \quad \text{for } l = 0, \dots, N
+\]
+This condition can be rewritten as a constraint on the frequency response \(H(\omega)\) of the filter:
+\[
+    \left. \frac{d^l H(\omega)}{d\omega^l} \right|_{\omega = \omega_0} = \left. \frac{d^l}{d\omega^l} \left( e^{-i\omega D} \right) \right|_{\omega = \omega_0}
+\]
+The different derivative conditions become:
+% \[ l=0 \quad \Rightarrow \quad \left. \sum_{n=0}^{N} h(n)e^{-i\omega n} \right|_{\omega = \omega_0} = \left. e^{-i\omega D} \right|_{\omega = \omega_0} \quad \Rightarrow \quad \sum_{n=0}^{N} h(n) = 1 \]
+% \[ l=1 \quad \Rightarrow \quad \left. \frac{d}{d\omega} \left( \sum_{n=0}^{N} h(n)e^{-i\omega n} \right) \right|_{\omega = \omega_0} = \left. \frac{d}{d\omega} \left( e^{-i\omega D} \right) \right|_{\omega = \omega_0} \Rightarrow -i \sum_{n=0}^{N} n h(n) = -iD \Rightarrow \sum_{n=0}^{N} n h(n) = D \]
+% \[ l=2 \quad \Rightarrow \quad \frac{d^2}{d\omega^2} \left( \sum_{n=0}^N h(n) e^{-i\omega n} \right) \Bigg|_{\omega = \omega_0} = \frac{d^2 \left( e^{-i\omega D} \right)}{d\omega^2} \Bigg|_{\omega = \omega_0} \quad \Rightarrow \quad \sum_{n=0}^N n^2 h(n) = D^2 \]
+% \[ \text{any } l \quad \Rightarrow \quad \frac{d^l}{d\omega^l} \left( \sum_{n=0}^N h(n) e^{-i\omega n} \right) \Bigg|_{\omega = \omega_0} = \frac{d^l \left( e^{-i\omega D} \right)}{d\omega^l} \Bigg|_{\omega = \omega_0} \quad \Rightarrow \quad \sum_{n=0}^N n^l h(n) = D^l \]
+\begin{align*}
+l = 0 \quad &\Rightarrow\quad 
+    \left.\sum_{n=0}^{N} h(n)e^{-i\omega n}\right|_{\omega = \omega_0}
+    = \left.e^{-i\omega D}\right|_{\omega = \omega_0} \quad 
+    \Rightarrow \quad \sum_{n=0}^{N} h(n) = 1\\
+l = 1 \quad & \Rightarrow\quad 
+    \left.\frac{d}{d\omega}\Bigl(\sum_{n=0}^{N} h(n)e^{-i\omega n}\Bigr)\right|_{\omega = \omega_0}
+    = \left.\frac{d}{d\omega}\bigl(e^{-i\omega D}\bigr)\right|_{\omega = \omega_0}
+    \quad  \Rightarrow  \quad -i\sum_{n=0}^{N}n\ h(n)=-iD
+    \Rightarrow \sum_{n=0}^{N}n\ h(n)=D\\
+l = 2 \quad & \Rightarrow\quad 
+    \left.\frac{d^2}{d\omega^2}\Bigl(\sum_{n=0}^{N} h(n)e^{-i\omega n}\Bigr)\right|_{\omega = \omega_0}
+    = \left.\frac{d^2}{d\omega^2}\bigl(e^{-i\omega D}\bigr)\right|_{\omega = \omega_0}
+    \quad \Rightarrow \quad \sum_{n=0}^{N}n^2\ h(n)=D^2\\
+\text{any }l \quad & \Rightarrow\quad 
+    \left.\frac{d^l}{d\omega^l}\Bigl(\sum_{n=0}^{N} h(n)e^{-i\omega n}\Bigr)\right|_{\omega = \omega_0}
+    = \left.\frac{d^l}{d\omega^l}\bigl(e^{-i\omega D}\bigr)\right|_{\omega = \omega_0}
+    \quad \Rightarrow \quad \sum_{n=0}^{N}n^l\ h(n)=D^l
+\end{align*}
+
+Therefore, the original condition of maximal flatness around \(\omega_0 = 0\) leads to a system of \(N+1\) linear equations of the form:
+\[
+\sum_{n=0}^{N} n^l h(n) = D^l, \qquad \text{for } l = 0, \ldots, N
+\]
+We interpret this system as a classic \textbf{moment problem}, which can be solved analytically or numerically to obtain the coefficients \(h(n)\) of the Lagrange interpolating FIR filter.
+These coefficients ensure that the filter approximates an ideal delay of \(D\) samples with maximum flatness in the frequency response at low frequencies.
+
+The system of $N+1$ linear equations has the following matrix expression:
+\[ \underline{\mathrm{v}} = \begin{pmatrix}
+    1 \\
+    D \\
+    D^2 \\
+    \vdots \\
+    D^N
+\end{pmatrix}_{N+1 \times 1}, \quad
+\underline{\mathrm{h}} = \begin{pmatrix}
+    h(0) \\
+    h(1) \\
+    h(2) \\
+    \vdots \\
+    h(N)
+\end{pmatrix}_{N+1 \times 1}, \quad
+\left[\mathrm{V}\right] = \underbrace{\begin{bmatrix}
+    1 & 1 & 1 & \cdots & 1 \\
+    0 & 1 & 2 & \cdots & N \\
+    0 & 1 & 2^2 & \cdots & N^2 \\
+    \vdots & \vdots & \vdots & \ddots & \vdots \\
+    0 & 1 & 2^N & \cdots & N^N \\
+\end{bmatrix}}_{\text{Vandermonde matrix, } N+1 \times N+1} \quad \Rightarrow \quad\underline{\mathrm{v}} = \left[\mathrm{V}\right] \underline{\mathrm{h}}
+\]
+The vector $\underline{\mathrm{v}}$ contains the \textbf{desired monomial moments} associated to the target delay $D$, while the vector $\underline{h}$ contains the \textbf{unknown filter coefficients}.
+
+Solving this linear system yields the coefficients of the Lagrange interpolating filter that satisfies the flatness conditions at \(\omega_0 = 0\).
+A \textbf{Vandermonde matrix} is non-singular, thus the solution always exists and can be expressed in closed form.
+The matrix expression and the explicit form of the filter coefficients are:
+\[
+\underline{\mathrm{h}} = \left[\mathrm{V}\right]^{-1} \underline{\mathrm{v}}, \qquad h(n) = \prod_{\substack{k=0 \\ k \neq n}}^{N} \frac{D - k}{n - k}, \qquad n = 0, \ldots, N 
+\]
+These coefficients exactly match those of the classical \textbf{Lagrange interpolation formula}.
+Optimal values of the filter order \( N \) can be determined for a given delay \( D \), but in general it is necessary to choose $N > \lfloor D \rfloor$ to ensure a \textbf{proper approximation}.
+The simplest scenario is $N=1$, which describes a linear interpolation:
+\[ h(0) = 1 - D, \quad h(1) = D \]
+In general:
+\begin{itemize}
+    \item If \( N \) is \textbf{odd}, the resulting filter exhibits an exact linear phase. However, the magnitude response has a zero at \( \omega = \pi \), which may be undesirable in some applications.
+    \item If \( N \) is \textbf{even}, the magnitude response is typically more accurate across the frequency band, but the phase response is degraded compared to the odd-order case.
+\end{itemize}
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Lagrange FIR Interpolator – Key Steps}]
+To estimate a fractional delay \( D \) on a discrete signal \( x(n) \), the Lagrange FIR method follows these steps:
+
+\begin{enumerate}
+    \item \textbf{Choose the filter order \( N \)}:
+    Use \( N+1 \) consecutive samples of \( x(n) \).
+
+    \item \textbf{Build a polynomial} that passes through those samples.
+
+    \item \textbf{Evaluate the polynomial at the desired delay} \( D \), which gives the interpolated value.
+
+    \item \textbf{Extract the FIR coefficients} from the polynomial.
+
+    \item \textbf{Apply the FIR filter} to the signal to approximate \( x(n - D) \).
+\end{enumerate}
+\end{tcolorbox}
+
+% \clearpage
+
+The following figure compares the frequency responses of Lagrange FIR filters of various orders ($1^\text{st}$, $2^\text{nd}$ and $3^\text{rd}$), for 11 different fractional delay values (from 0 to 1 for the first, from 0.5 to 1.5 for the second, from 1 to 2 for the third filter):
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\textwidth]{linear_interp.png}
+    \includegraphics[width=0.32\textwidth]{lagrange_order2.png}
+    \includegraphics[width=0.32\textwidth]{lagrange_order3.png}
+    \caption{Lagrange FIR frequency response - $N=1$ (left), $N=2$ (center) and $N=3$ (right)}
+\end{figure}
+\subsubsection{FIR methods comparison}
+The following plots are the result of the code script \texttt{fractionalDelay} ($D=13.23$, $N=26$):
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{matlab_results.png} 
+    \caption{Magnitude response and group delay - Least-Square (left), Windowed Least-Square (right) and Lagrange (bottom)}
+\end{figure}
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Approximation using IIR filters}]
+\begin{itemize}
+  \item \textbf{IIR filters} can achieve similar frequency-domain specifications with \textbf{significantly lower orders} compared to FIR filters.
+  \item However, the \textbf{design} process for IIR filters is inherently \textbf{more complex} and less straightforward.
+  \item A key concern is stability: all poles must lie within the unit circle in the $z$-domain. This constraint introduces \textbf{potential instability} and makes real-time updates more difficult to manage.
+\end{itemize}
+\end{tcolorbox}
+
+\clearpage
+
+\subsection{Delay-based effects}
+
+\subsubsection{Feedforward Delay Line}
+A simple FIR structure that implements a delay effect is the \textbf{feedforward delay line}, described by the difference equation:
+\[
+y(n) = x(n) + g \cdot x(n - M), \qquad M = \lfloor \tau F_s \rfloor \ \text{[samples]}, \qquad \tau: \ \text{time delay [s]}, \qquad F_s: \ \text{sampling rate [Hz]}
+\]
+The parameter $g$ is the gain factor applied to the delayed signal.
+The $z$-domain \textbf{transfer function} is:
+\[
+H(z) = 1 + g \ z^{-M}
+\]
+The magnitude response oscillates between $1 - |g|$ and $1 + |g|$.
+The following figure shows the system block diagram and the magnitude response for both positive and negative $g$:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{immaginsde.png}
+    \caption{Feedforward delay line - FIR block diagram (left) and magnitude response (right)}
+\end{figure}
+
+In the \textbf{frequency domain}, this structure introduces a \textbf{comb-filtering effect}: when $g > 0$, the filter amplifies frequencies that are integer multiples of $1/\tau$ and attenuates those in between. Conversely, if $g < 0$, it attenuates those multiples and amplifies the intermediate frequencies.
+
+In the \textbf{time domain}, the perceived effect depends on the value of $\tau$. If $\tau$ is \textbf{large} (i.e. more than 20 ms), the delayed signal is heard as a \textbf{distinct echo} and spectral colouration is barely noticeable. On the other hand, for \textbf{short} $\tau$ (i.e. less than 20 ms), the delay is not recognised as a separate event, but the resulting \textbf{spectral effects} (i.e. filtering) become prominent.
+
+The following plot is the result of the code script \texttt{combFIR}:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{combFIR_plot.png} 
+    \caption{FIR comb filtering ($\tau = 1$ ms, $g = 0.5$) - time (left) and frequency response (right)}
+    % \label{fig:combFIR}
+\end{figure}
+
+\clearpage
+\subsubsection{Feedback Delay Line}
+In a \textbf{feedback delay line}, the output signal $y(n)$ is the combination of the current input $x(n)$ and a delayed version of the output itself, scaled by a gain factor $g$. The difference equation is given by:
+\[
+y(n) = c \cdot x(n) + g \cdot y(n - M), \qquad M = \lfloor \tau F_s \rfloor \ \text{[samples]}, \qquad \tau: \ \text{time delay [s]}, \qquad F_s: \ \text{sampling rate [Hz]}
+\]
+The parameter $g$ is the gain factor applied to the input samples, while the parameter $c$ is the gain factor applied to the delayed output samples.
+The corresponding \textbf{transfer function} is:
+\[
+H(z) = \frac{c}{1 - g z^{-M}}
+\]
+Its structure is described by an \textbf{infinite impulse response (IIR)} filter, due to the feedback loop:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{feedback delay line.png}
+    \caption{Feedback delay line - IIR block diagram (left) and magnitude response (right)}
+\end{figure}
+
+The magnitude response of this filter exhibits a comb-like pattern, where different peaks occur based on the sign of $g$ and the values of $c$ and $g$.
+The position and sharpness of these peaks are influenced by $M$ and $g$.
+This feedback structure requires a scaling factor $c$ to prevent excessive amplification - due to the recursive nature of the system - and guarantee stability.
+
+Every $\tau$ seconds, the output receives a new copy of the input signal, scaled by a factor $g^p$, where $p$ is the number of times the signal has passed through the feedback loop.
+This leads to a potentially infinite series of echoes whose amplitudes decrease (or increase) geometrically - depending on the magnitude of $g$.
+
+The system remains \textbf{stable} as long as the condition $\abs{g} \leq 1$ is satisfied, ensuring that the energy of the response does not grow unbounded. 
+In particular, if $\abs{g} < 1$, the response \textbf{decays exponentially over time}.
+
+The following plot is the result of the code script \texttt{combIIR}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{comb_iir.png} 
+    \caption{IIR comb filtering ($\tau = 0.25$ ms, $g = 0.5$, $c = 1$) - time (left) and frequency response (right)}
+    % \label{fig:IIRcomb}
+\end{figure}
+
+\clearpage
+\subsubsection{Universal Comb Filter}
+The \textbf{universal comb filter} structure provides a flexible implementation of different types of filters by appropriately selecting the coefficients in the three branches: \textbf{feedforward (FF)}, \textbf{feedback (FB)} and \textbf{blend (BL)}. The following diagram shows how to implement FIR, IIR, allpass and pure delay filters - with a single implementation:
+
+\begin{figure}[H]
+    \centering
+    \begin{tabular}{cc}
+        \includegraphics[width=0.35\textwidth]{universal_comb_filter.png}
+        &
+        \raisebox{1.5cm}{ % Adjust this value to pull the table up
+        \begin{tabular}{lccc}
+            \toprule
+            & \textbf{BL} & \textbf{FB} & \textbf{FF} \\
+            \midrule
+            FIR comb filter & X & 0 & X \\
+            IIR comb filter & 1 & X & 0 \\
+            allpass         & $a$ & $-a$ & 1 \\
+            delay           & 0 & 0 & 1 \\
+            \bottomrule
+        \end{tabular}
+        }
+    \end{tabular}
+    \caption{Universal comb filter - block diagram (left) and parameters (right)}
+\end{figure}
+
+
+The following plot is the result of the code script \texttt{combUniversal}:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{comb_universal_result.png}
+    \caption{Universal comb filter ($\tau=0.25$ s, $\mathrm{BL} = 0.5$, $\mathrm{FB} = -0.5$,  $\mathrm{FF} = 1$) - time (left) and frequency response (right)}
+\end{figure}
+
+With this configuration, we can implement a delay effect with flat frequency response - through appropriate parameter tuning.
+
+\subsubsection{Parallel Connection of Comb Filters}
+
+We can \textbf{extend} the previous universal comb filter connecting multiple instances in \textbf{parallel}. The blend, feedback and feedforward parameters become $N \times N$ matrices - which allows to define more complex behaviours, obtaining richer sounds. This framework forms the basis of many audio effects such as slapback delay, echo and reverberation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{parallel_comb_filters.png}
+    \caption{Parallel connection of $N$ universal comb filter structures.}
+    \label{fig:parallel_comb}
+\end{figure}
+
+\subsubsection{Delay-based audio effects}
+
+The diagram below shows a standard structure for implementing delay-based audio effects. This flexible architecture is based on a variable-length delay line and includes three parameters: blend (BL), feedforward (FF) and feedback (FB) - which control how the delayed signal is mixed and looped back. We can implement different audio effects by tuning these parameters - along with delay time, modulation depth and modulation signal.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{immagine.png}
+    \caption{ Industry standard delay-based audio effect structure}
+\end{figure}
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Delay-based audio effects}]
+\textbf{Chorus and flanger effects:}
+\begin{itemize}
+    \item The output signal is the sum of the input signal and a delayed replica of it.
+    \item The delay is modulated over time.
+    \item Fractional delay lines are used to avoid discontinuities.
+    \item Chorus and flanger are distinguished by the minimum delay amount.
+\end{itemize}
+
+\textbf{Vibrato:}
+\begin{itemize}
+    \item The output consists of only a delayed version of the input.
+    \item The delay varies sinusoidally over time.
+    \item There is no direct path from input to output.
+\end{itemize}
+
+\textbf{Other effects} - such as echo, slapback and reverberation - also derived using similar delay-based structures.
+\end{tcolorbox}
+
+The following table provides typical settings for various effects:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccccc}
+        \toprule
+         & \textbf{BL} & \textbf{FF} & \textbf{FB} & \textbf{DELAY [ms]} & \textbf{DEPTH [ms]} & \textbf{MOD} \\
+        \midrule
+        Vibrato & 0 & 1 & 0 & 0 & 0--3 & 0.1--5 Hz Sine \\
+        Flanger & 0.7 & 0.7 & 0.7 & 0 & 0--2 & 0.1--1 Hz Sine \\
+        (white) Chorus & 0.7 & 1 & $-0.7$ & 1--30 & 1--30 & low-pass noise \\
+        Doubling & 0.7 & 0.7 & 0 & 10--100 & 1--100 & low-pass noise \\
+        \bottomrule
+    \end{tabular}
+    \caption{Standard parameters for various delay-based audio effects}
+\end{table}
+
+\clearpage
+
+\subsubsection{Case Study: Rotating Speaker Effect}
+
+One of the most popular electric organs built in the early 20\textsuperscript{th} century, the \textbf{Hammond organ} became a widely used keyboard instrument in pop, jazz and rock music production. Part of its characteristic timbre is due to the \textbf{Leslie speaker}, a rotating speaker system that introduces unique modulation and spatial effects.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{hammond_organ.jpg}
+    \caption{Hammond organ}
+\end{figure}
+
+The Leslie speaker system consists of two distinct units that contribute to its unique sound through mechanical modulation effects.
+
+The \textbf{treble unit} consists of a \textbf{dual-horn} structure rotated by a \textbf{motor}.
+Only one horn actually produces sound, while the other is used to balance the weight.
+Because the horns are highly directional, a stationary listener perceives a clear \textbf{amplitude modulation} as the horn rotates.
+Moreover, since the sound is emitted from the mouth of the horn (not from the center of rotation), the listener also perceives a \textbf{frequency modulation} effect (Doppler effect).
+
+Regarding the \textbf{bass unit}, the \textbf{loudspeaker} is \textbf{fixed}, but it radiates the sound into a \textbf{rotating wooden drum}.
+The rotation and the shape of the drum enhance directionality, leading to a time-varying intensity of the sound.
+This causes a clear \textbf{amplitude modulation} effect.
+
+\begin{figure}[H]
+    \centering
+    % \begin{minipage}[t]{0.28\textwidth}
+        % \centering
+        \includegraphics[width=0.28\textwidth]{leslie_photo.jpg.png}
+        % \textit{(a) Photo.}
+    % \end{minipage}
+    % \begin{minipage}[t]{0.27\textwidth}
+        % \centering
+        \includegraphics[width=0.27\textwidth]{leslie_schematic.jpg.png}
+        % \textit{(b) Schematic representation.}
+    % \end{minipage}
+    \caption{Leslie rotating speaker - photo (left) and schematic (right)}
+\end{figure}
+
+We can implement a \textbf{digital Leslie speaker} by simulating its modulation behaviour - using a discrete-time signal processing structure: the input signal \( x(n) \) is split into \textbf{bass} (LPF) and \textbf{treble} components (HPF). 
+Both components go through \textbf{different variable delay lines} called Spectral Delay Filters (SDF1 and SDF2), whose delays are modulated by separate modulators.
+These delay lines simulate the \textbf{Doppler effect} caused by the rotating horn and drum.
+After the delay, we apply \textbf{amplitude modulations (AM)} to reproduce the changes in volume caused by rotation.
+Finally, both signals are added together to produce the output \( y(n) \).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{leslie_model_block.png}
+    \caption{Block diagram of Leslie discrete time implementation}
+\end{figure}
+
+A common implementation for LPFs and HPFs is \textbf{4\textsuperscript{th} order Butterworth IIR filters} with cutoff frequency \( f_c = 800 \ \text{Hz} \), which closely matches the \textbf{crossover} point of the real system.
+To make the simulation more realistic, we may model the actual \textbf{analog crossover} used in the original Leslie cabinet - instead of using a generic digital filter.
+
+The \textbf{rotary effect} of the Leslie is simulated using \textbf{sinusoidal modulators} that mimic the movement of the rotating horn and drum.
+Two independent \textbf{low-frequency oscillators} are used - one for the treble rotor and one for the bass rotor.
+The modulators use \textbf{different envelope shapes} to simulate how the rotors accelerate and slow down differently: this is especially important for the \textbf{bass rotor}, which reacts \textbf{more slowly} due to its greater inertia.
+Typical \textbf{modulation frequencies} are $f_m=2$ Hz for slow rotations and $f_m=6$ Hz for fast rotations.
+
+Additionally, a small \textbf{frequency offset} is applied between the two modulation paths: the modulator controlling the treble path is driven at a frequency that is 0.1 Hz higher than the modulator of the bass path.
+This slight difference creates a subtle \textbf{phase mismatch} over time, producing a natural beating effect between the two signals.
+This interaction helps recreate the swirling and spacious character typical of the Leslie speaker sound, given by the fact that the motors rotate at \textbf{slightly different speeds}.
+
+\textbf{Amplitude modulation (AM)} is easy to implement in this context, especially when we ignore the frequency-dependent radiation pattern of bass speaker and rotating horn.
+We implement the modulation multiplying the input signal with a sinusoidal modulating function \( m(n) \), scaled by a factor \( \alpha \) that sets the modulation depth:
+\[
+y(n) = [1 + \alpha \cdot m(n)] \ x(n)
+\]
+A typical value of \( \alpha = 0.9 \) yields a good results for both treble and pass paths, while maintaining a noticeable modulation effect.
+
+To simulate the perceived \textbf{frequency modulation (FM)} due to the Leslie speaker's motion, we impose frequency dependence on the signal delay: this effect can be efficiently implemented using a series of first-order allpass filters, commonly referred to as \textbf{Spectral Delay Filters (SDF)}.
+The \textbf{transfer function} of a first-order allpass filter is defined as:
+\[
+H(z) = \frac{a_1 + z^{-1}}{1 + a_1 z^{-1}}, \qquad a_1 \in [-1, 1]
+\]
+While the magnitude response of this filter is flat (0 dB) across all frequencies, its phase response is generally non-linear.
+This phase variation introduces a \textbf{frequency-dependent delay}, making allpass filters particularly suitable for modelling frequency modulation.
+
+The associated \textbf{group delay} is:
+\[
+\tau_g(\omega) = -\frac{\partial \angle H(\omega)}{\partial \omega} = \frac{1 - a_1^2}{1 + 2a_1 \cos(\omega) + a_1^2}
+\]
+To enhance the effect of frequency modulation, we may use a \textbf{cascade} of $N$ first-order allpass filters:
+\[
+H_N(z) = \left( \frac{a_1 + z^{-1}}{1 + a_1 z^{-1}} \right)^N
+\]
+In order to guarantee \textbf{stability}, we need $|a_1| < 1$. The coefficient $a_1$ is made time-varying by using a modulation signal $m(n)$, so that:
+\[
+a_1(n) = m'(n)
+\]
+This leads to the following difference equation for the time-varying system:
+\[
+y(n) = m'(n) x(n) + x(n-1) - m'(n) y(n-1), \qquad
+m'(n) = M_s m(n) + M_b
+\]
+This approach dynamically controls the filter's phase response, producing a time-varying frequency-dependent delay that simulates the Doppler effect of the Leslie speaker.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Parameter} & \textbf{Treble (SDF1)} & \textbf{Bass (SDF2)} \\
+        \midrule
+        SDF length $N$ & 4 & 3 \\
+        Modulator scaler $M_s$ & 0.2 & 0.04 \\
+        Modulator bias $M_b$ & -0.75 & -0.92 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Parameters of the Spectral Delay Filters of a Leslie speaker}
+\end{table}
+
+\clearpage
+
+
+\clearpage
+

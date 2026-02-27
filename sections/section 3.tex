@@ -1,0 +1,2089 @@
+\section{Source-Based Synthesis}
+
+\subsection{Introduction}
+
+The origins of \textit{physical modelling synthesis} can be traced back to 1971, when Hiller and Ruiz introduced the idea of using \textit{numerical simulations of the wave equation} for sound generation-a novel approach at the time, grounded in the physical behaviour of vibrating objects.
+Later, in 1983, McIntyre, Schumacher and Woodhouse proposed the use of \textit{non-linear maps} to model self-sustained oscillations in musical instruments.
+These early efforts demonstrated that even modest computational resources could simulate realistic instrument behaviours.
+Today, this field has evolved into \textit{real-time physical modelling}, now possible even on low-cost platforms.
+
+Source modelling focuses on how a sound is physically produced, rather than just reproducing the final sound itself. This gives a different and more natural way to design sound synthesis, where:
+
+\begin{itemize}
+    \item \textbf{Timbre comes from the model itself}, instead of being shaped by extra control signals like in additive or granular synthesis.
+    
+    \item The core idea is to \textbf{simulate how real physical elements interact} - like how a string vibrates, or how air moves through a tube.
+    
+    \item The \textbf{control parameters} are few, but very meaningful - they represent real \textbf{physical properties} such as mass, stiffness, air pressure or length.
+\end{itemize}
+
+Even though this method can be \textbf{computationally demanding}, it gives highly realistic and natural-sounding results. To make it work in real time and stay flexible, we use efficient modelling techniques like:
+
+\begin{itemize}
+    \item \textbf{Modal synthesis}, which focuses on how systems vibrate and resonate;
+    \item \textbf{Hybrid models} like WaveGuide Networks or Wave Digital Structures, which combine simple components to simulate complex instruments.
+\end{itemize}
+
+\subsection{Physical Model Synthesis (PMS)}
+Instead of directly modelling sounds, \textbf{Physical Model Synthesis (PMS)} models the instrument itself. This approach uses a limited number of intuitive parameters with physical meaning (i.e. material, shape, excitation). 
+It ensures a strong link between parameter changes and resulting sound behaviour, relying on real-world experience with physical instruments. This makes PMS particularly effective for exploring timbre and producing expressive, realistic sounds.
+One of the strengths of PMS is the limited number of parameters, which are both intuitive and physically meaningful. There is also a clear and often predictable relationship between input and output.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{pms.png}
+    \caption{Physical Model Synthesis - wind instrument example (left), mechanical model (center) and frequency responses (right)}
+\end{figure}
+
+%Many algorithms - especially those based on AI - have been developed to work with this type of model. But PMS is more than just simulation: it means understanding and building key parts of a physical instrument (like resonators or soundboards) and their interaction (i.e. how two strings influence each other).
+
+While providing intuitive (and physically inspired) approach to sound synthesis, PMS presents several challenges. Creating accurate models requires not only a good understanding and implementing (modelling functional blocks and interaction blocks) of physical laws (such as conservation principles, stability conditions and interaction rules like Kirchhoff’s laws), but also practical skills in algorithm design (discretization, iterative solvers, ...).
+
+%The implementation involves handling \textbf{discretization}, maintaining \textbf{numerical stability} and achieving \textbf{real-time performance}. 
+Modular frameworks - like Digital Waveguides (DWG) and Wave Digital Filters (WDF) - help manage the complexity of building different model for each type of interaction by enabling efficient reuse and combination of physical building blocks.
+
+Understanding how real-world sounds (plucking, percussion, ...) are generated is still a key challenge - especially in non-linear and dynamic contexts (such as plucking mechanism or friction phenomena). %Crucially, having more physical details is not always better: a simplified model can sometimes be more efficient and perceptually convincing than one that is fully accurate.
+
+%Depending on \textbf{how a sound is produced} - such as plucking, hitting or rubbing - we need different kinds of models.
+%Not only PMS allows to model real instruments, but to design new ones - both real and virtual. These new instruments often keep something familiar in their sound - for instance, the electric piano had a very basic mechanical system, but its unique sound comes from the pickup design.
+Despite the significant potential of PMS, most commercial physical modelling synthesizers and software primarily focus on preset-based and imitative synthesis.
+The modular approach allows to synthesize sound following a \textbf{Lego-like strategy}, where sounds are created from scratch by combining different blocks: that works well with interfaces designed to build models step by step (procedural model) - allowing for a more intuitive design process.
+The concept of \textbf{exploration of timbral spaces} - which means finding the right parameters to create a specific sound - is not easy in PMS, as it requires deep understanding in how the different factors influence the timbre.
+The model's physical laws can be stretched or modified - or even invented: \textbf{pseudo-physical synthesis} is an exploration technique that allows define \textit{impossible instruments} by bending the real behaviour into an unrealistic one, or to merge between different real instruments.Finally, there’s value in \textbf{learning from physics} even when designing models that aren’t strictly based on real-world principles.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{pms product.png}
+    \includegraphics[width=0.3\linewidth]{pms products 2.png}
+    \caption{Commercial products based on PMS}
+\end{figure}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{pms synthesizers.png}
+    \includegraphics[width=0.2\linewidth]{pms synthesizers 2.png}
+    \includegraphics[width=0.35\linewidth]{pms synthesizers 3.png}
+    \caption{Synthesizers based on PMS}
+\end{figure}
+
+\subsection{Quick Recap from Physics}
+
+\subsubsection{2nd-order physical oscillator}
+
+The simplest lumped-parameter vibrating system, often used to describe the normal modes of more complex structures, can be modelled using a second-order (damped) \textbf{ordinary differential equation (ODE)}:
+\[
+\ddot{x} + 2\alpha \ \dot{x} + \omega_0^2 \ x = 0
+\]
+The general solution to this equation is:
+\[
+x(t) = a_0 \ e^{-\alpha t} \cos(\omega_r \ t + \phi_0), \quad
+\omega_r = \sqrt{\omega_0^2 - \alpha^2}
+\]
+The constants \( a_0 \) and \( \phi_0 \) are uniquely determined by the initial conditions \( x(0) \) and \( \dot{x}(0) \).
+This model is a \textbf{2nd-order physical oscillator}, which exists in \textbf{electrical domain} and \textbf{mechanical domain} as:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\linewidth]{electric oscillator.png}
+    \includegraphics[width=0.14\linewidth]{mechanic oscillator.png}
+    \caption{Physical oscillator - electric (left) and mechanical domain (right)}
+\end{figure}
+
+The electric circuit is described by the following ODE:
+\[
+L\ddot{i} + R \dot{i} + \frac{1}{C} i = 0, \qquad \alpha = \frac{R}{2L}, \qquad \omega_0^2 = \frac{1}{LC}
+\]
+The mechanical system is described by the following ODE:
+\[
+m\ddot{x} + r\dot{x} + k x = 0, \qquad \alpha = \frac{r}{2m}, \qquad \omega_0^2 = \frac{k}{m}
+\]
+The \textbf{electric-mechanic analogy} allows to associate velocity with current and force with voltage.
+
+Let us consider an example in acoustic domain: the \textbf{Helmholtz resonator}.
+When the resonator is small compared to the wavelength $\lambda$ of the sound, the \textbf{pressure} inside the cavity can be considered \textbf{constant}.
+This simplification allows the system to behave like a second-order oscillator.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{Helmholtz resonator.png}
+    \caption{Helmholtz resonator - cavity volume $V$, opening cross-section $S$ and opening length $L$}
+\end{figure}
+
+The \textbf{resistive behaviour} arises from the air flowing through the opening (with flow $u(t)$ in $\text{[m\textsuperscript{3}/s]}$), caused by a pressure difference $\Delta p_\text{op}$ and influenced by viscous and thermal losses (fluid-dynamic acoustic resistance $R$ in $\text{[Pa·s/m\textsuperscript{3}]}$):
+\[
+\Delta p_{\text{op}}(t) = R u(t)
+\]
+
+\clearpage
+
+At the same time, the system exhibits \textbf{inertial behaviour} due to the mass of air $m$ in the neck:
+\[
+m = \rho_{\text{air}} S L, \qquad \rho_\text{air}: \text{air density [kg/m\textsuperscript{3}]}
+\]
+Applying Newton's law ($F=ma$), the pressure drop due to inertia becomes:
+\[
+\frac{\Delta p_{\text{tube}}(t)}{S} = m \dot{v}(t) = m \frac{\dot{u}(t)}{S}
+\quad \Rightarrow \quad 
+\Delta p_{\text{tube}}(t)=\rho_{\text{air}} S L \dot{u}(t)
+\]
+Where $v(t)$ is the particle velocity in $\text{[m/s]}$. The Helmholtz resonator also exhibits an \textbf{elastic behaviour} due to the compressibility of the air in the cavity. A variation in pressure \( \Delta p_{\text{cav}} \) leads to a contraction of the air volume \( dV \):
+\[
+- \rho_{\text{air}} c^2 \cdot \frac{dV}{V} = \Delta p_{\text{cav}}
+\quad\Rightarrow\quad
+- dV = \frac{V}{\rho_{\text{air}} c^2} \Delta p_{\text{cav}}
+\]
+The volume variation \( -dV(t) \) must match the integrated airflow entering the cavity over time:
+\[
+- dV(t) = \int_0^t u(t') \ dt' = S\int_0^t v(t') \ dt'
+\]
+We can define an \textbf{equivalent stiffness} $k$ to model the system like a spring:
+\[
+\Delta p_{\text{cav}} = -\frac{\rho_{\text{air}} c^2}{V}dV
+\quad \Rightarrow \quad 
+\Delta p_{\text{cav}} = \frac{\rho_{\text{air}}c^2}{V} S \int_0^t v(t') \ dt'
+\quad \Rightarrow \quad 
+S \Delta p_{\text{cav}}(t) = \underbrace{\frac{\rho_{\text{air}} S^2 c^2}{V}}_{k} \int_0^t v(t') \ dt'
+\]
+The complete behaviour of the Helmholtz resonator can be modelled as a series connection of inertial, resistive and elastic elements, since the airflow \( u(t) \) passes through all of them. This leads to the following differential equation (same as in the electric oscillator):
+\[
+\underbrace{\left( \rho_{\text{air}} S L \right)}_{m, \ L} \ \ddot{x}(t) + R \ \dot{x}(t) + \underbrace{\frac{\rho_{\text{air}} S^2 c^2}{V}}_{k, \ 1/C} x(t) = 0
+\]
+The above second-order ODE is an oscillator, which can be in electrical domain (by means of $L$, $R$ and $C$) or in mechanical domain (by means of $m$, $r$ and $k$). Since the same flow passes through each element (neck's mass, resistance at the opening, cavity's compliance) in the electrical analogy, these elements are in series.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{Helmholtz resonator.png}
+    \includegraphics[width=0.3\linewidth]{electric oscillator.png}
+    \caption{Helmholtz resonator (left) and its electric representation (right)}
+\end{figure}
+
+In physical systems - in electrical, mechanical and acoustic domain - we can always identify a pair of variables (i.e. \textbf{Kirchhoff variables}) whose product gives the power (unit $ W = \text{kg} \cdot \text{m}^2 / \text{s}^3 $).
+In the electric domain, we use voltage $v$ and current $i$, which are in the following relation (in Laplace domain $\mathscr{L}$):
+\[
+V(s) = \underbrace{Z(s)}_{\text{impedance}} I(s) =
+\begin{cases}
+    R \ I(s) & \text{resistor} \\
+    sL \ I(s) & \text{inductor} \\
+    \frac{1}{sC} I(s) & \text{capacitor} \\
+\end{cases}, \qquad \Gamma(s) = \frac{1}{Z(s)}: \text{admittance}
+\]
+We describe the Kirchhoff variables in mechanical and acoustic domain using the following analogy:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+    \textbf{Electrical}     & \textbf{Mechanical}       & \textbf{Acoustic}                & \textbf{Units}          \\
+    \midrule
+    Current $i$ (A)         & Velocity $v$ (m/s)        & Flow $u$ (m$^3$/s)               &                         \\
+    Voltage $v$ (V)         & Force $f$ (N)             & Pressure $p$ (Pa)                &                         \\
+    \midrule
+    (Resistance) $R$        & (Damping) $r$             & (Opening) $R$                    & (kg·m$^2$)              \\
+    (Capacitance) $\tfrac{1}{sC}$ & (Spring) $k/s$      & (Cavity) $\dfrac{\rho_{\mathrm{air}}\ c^2}{V\ s}$ & (kg/s)          \\
+    (Inductance) $sL$       & (Mass) $m\cdot s$         & (Bore) $\rho_{\mathrm{air}}\ L\ S\ s$ & (kg/m$^4$·s)   \\
+    \bottomrule
+    \end{tabular}
+    \caption{Analogy between electrical, mechanical and acoustic systems.}
+\end{table}
+
+ 
+
+\subsubsection{Modal Decomposition}
+More complex oscillating systems can often be described as \textbf{combinations of simpler oscillators} - i.e. multiple point masses connected by linear springs and dampers.
+This allows reformulating the system using \textit{normal coordinates}, which correspond to the \textbf{normal modes of oscillation} - independent patterns in which the system naturally vibrates.
+
+Let us consider the following example with two identical point masses \( m \) and three identical springs of stiffness \( k \):
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\linewidth]{two masses system.png}
+    \caption{Modal decomposition - two masses system}
+\end{figure}
+
+The system is described by the following ODEs:
+\[
+\begin{cases}
+m \ddot{x}_1(t) + k x_1(t) + k (x_1(t) - x_2(t)) = 0 \\
+m \ddot{x}_2(t) + k x_2(t) + k (x_2(t) - x_1(t)) = 0
+\end{cases}
+\]
+These are two \textbf{coupled oscillators}.
+It is of interest to understand if we can decouple them and use a different coordinate system: we introduce a \textbf{change of coordinates} using the \textbf{normal modes} (characteristic modes of vibration):
+\[
+\begin{cases}
+q_1 = x_1 + x_2 \\
+q_2 = x_1 - x_2
+\end{cases}
+\quad \Rightarrow \quad
+\begin{cases}
+x_1 = \frac{q_1 + q_2}{2} \\
+x_2 = \frac{q_1 - q_2}{2}
+\end{cases}
+\]
+Substituting into the equations of motion, we obtain two \textbf{independent equations}:
+\[
+\begin{cases}
+\frac{m}{2} \left(\ddot{q_1} + \ddot{q_2} \right) + \frac{k}{2} \left(q_1 + q_2 \right) + \frac{k}{2} q_2 = 0 \\
+\frac{m}{2} \left(\ddot{q_1} - \ddot{q_2} \right) + \frac{k}{2} \left(q_1 - q_2 \right) + \frac{k}{2} q_2 = 0
+\end{cases}
+\quad \Rightarrow \quad
+\begin{cases}
+    \text{Sum:} & m \ddot{q_1} + k q_1 = 0 \\
+    \text{Difference:} & m \ddot{q_2} + 3k q_2 = 0 \\
+\end{cases}
+\]
+\[
+\Rightarrow \quad
+\begin{cases}
+\ddot{q}_1 &= -\omega_0^2 q_1 \\
+\ddot{q}_2 &= -3\omega_0^2 q_2
+\end{cases}, \qquad \omega_0^2 = \frac{k}{m}
+\]
+\clearpage
+The system has been diagonalized: the dynamics now involve two independent second-order oscillators (i.e. \textbf{normal modes}), each oscillating at a \textbf{different natural frequency}.
+This approach can be generalized to more complex systems of \( N \) coupled masses and springs. In general, any such system can be rewritten in terms of \( N \) uncoupled normal modes.
+
+A lot of instruments are modelled using this mechanism, such as the electric piano.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Extension to General Systems}]
+The procedure shown for two coupled masses can be generalized to more complex systems composed of \( N \) point masses connected through springs and dampers. Each interaction contributes to the global dynamics, but:
+
+\begin{itemize}
+  \item The system can still be diagonalized by changing variables to a set of \emph{normal coordinates} \( q_i \), called \textbf{normal modes of oscillation}.
+  \item Each normal mode evolves independently and follows a second-order differential equation-possibly damped.
+  \item The displacement of each mass can then be expressed as a linear combination of these uncoupled normal modes.
+\end{itemize}
+
+In essence, even complex mechanical systems can be seen as a superposition of independent harmonic oscillators, each with its own natural frequency and damping characteristics.
+
+\end{tcolorbox}
+
+\subsubsection{Continuous vibrating systems}
+
+\textbf{1D wave propagation} in an ideal elastic medium is described by the classical wave equation (\textbf{D'Alembert equation}):
+\[
+\frac{\partial^2 y}{\partial x^2}(x,t) = \frac{1}{c^2} \frac{\partial^2 y}{\partial t^2}(x,t) \qquad y(x,t): \text{vertical displacement [m]}
+\]
+In spherical coordinates, a more general \textbf{3D wave propagation} equation involves the Laplace operator $\nabla$:
+\[
+\nabla^2 = \frac{1}{r^2} \frac{\partial}{\partial r} \left( r^2 \frac{\partial}{\partial r} \right)
++ \frac{1}{r^2 \sin \theta} \frac{\partial}{\partial \theta} \left( \sin \theta \frac{\partial}{\partial \theta} \right)
++ \frac{1}{r^2 \sin^2 \theta} \frac{\partial^2}{\partial \phi^2}
+\]
+If we assume radial symmetry and neglect higher-order angular modes, only the radial part is retained:
+\[
+\frac{1}{r^2} \frac{\partial}{\partial r} \left( r^2 \frac{\partial R}{\partial r} \right)(r,t) =
+\frac{1}{c^2} \frac{\partial^2 R}{\partial t^2}(r,t)
+\quad \overset{ R(r, t) = \frac{\tilde{R}(r, t)}{r}}{\longrightarrow} \quad 
+\frac{\partial^2 \tilde{R}}{\partial r^2}(r,t) = \frac{1}{c^2} \frac{\partial^2 \tilde{R}}{\partial t^2}(r,t)
+\]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{cyl sphere coordinates.png}
+    \caption{Cylindrical (left) and spherical coordinates (right)}
+\end{figure}
+
+\subsubsection{Travelling Waves - D'Alembert Solution}
+
+The 1D wave equation can be factorized (decomposition of the equation into a product of two differential operators) as:
+\[
+\underbrace{\left( \frac{\partial}{\partial x} - \frac{1}{c} \frac{\partial}{\partial t} \right)}_{\Delta^-} \
+\underbrace{\left( \frac{\partial}{\partial x} + \frac{1}{c} \frac{\partial}{\partial t} \right)}_{\Delta^+} \ y = 0
+\]
+\clearpage
+From this, we deduce the general solution as a sum of \textbf{two travelling waves} (\textbf{D'Alembert solution}):
+\[
+y(x,t) = y^+(ct - x) + y^-(ct + x), \qquad y^+: \text{progressive wave }(x>0), \quad y^-: \text{regressive wave } (x<0)
+\]
+The shape of the wave depends on \textbf{initial conditions}:
+\[
+y_0(x) = y(x,0), \qquad v_0(x) = \frac{\partial y}{\partial t}(x,0)
+\]
+And on \textbf{boundary conditions}:
+\[
+\begin{aligned}
+    \text{Fixed end at $x=0$:} \qquad y(0,t) = 0 \quad \Rightarrow \quad y^+(ct) = -y^-(ct) \\
+    \text{Free end at $x=0$:} \qquad \frac{\partial y}{\partial x}(0,t) = 0 \quad \Rightarrow \quad y^+(ct) = y^-(ct)
+\end{aligned}
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{travelling waves.png}
+    \caption{Travelling waves - boundary conditions and wave reflection}
+\end{figure}
+
+\subsubsection{Standing Waves - Fourier Solution}
+
+Let us consider an ideal string of length \( L \), fixed at both ends. The boundary conditions are:
+\[
+y(x=0,t) = 0, \qquad y(x=L,t) = 0
+\]
+We look for \textbf{stationary waves} as solutions (\textbf{Fourier solution}):
+\[
+\begin{cases}
+    y(x,t) = y_1(x) \ y_2(t) \\
+    \frac{\partial^2 y}{\partial x^2}(x,t) = \frac{1}{c^2} \frac{\partial^2 y}{\partial t^2}(x,t)
+\end{cases} \quad \Rightarrow \quad
+\frac{y_1''(x)}{y_1(x)} = \frac{1}{c^2} \frac{\ddot{y}_2(t)}{y_2(t)} = \alpha
+\]
+Since each side depends only on one variable (between $x$ and $t$), they must equal a common constant \( \alpha \).
+We obtain two ODEs to describe $y_1$ and $y_2$:
+\[
+y_1''(x) = \alpha y_1(x), \qquad \ddot{y}_2(t) = c^2 \alpha y_2(t)
+\]
+These equations describe respectively spatial and temporal behaviour of the \textbf{standing waves (modes)} of the vibrating string.
+Applying the boundary conditions (which are in space), we define a sinusoidal spatial behaviour:
+\[
+\begin{cases}
+    y_1(0) = 0 \\
+    y_1(L) = 0
+\end{cases} \quad \Rightarrow \quad y_1(x) = \sqrt{\frac{2}{L}} \sin(k_n x), \qquad k_n = \frac{n\pi}{L}, \qquad n \in \mathbb{N}^*
+\]
+Only a \textbf{countable set of spatial modes} is allowed: each \( n \) corresponds to a \textbf{mode} of vibration (i.e. standing wave).
+
+The temporal behaviour \( y_2(t) \) takes the following sinusoidal form:
+\[
+y_2(t) = A \sin(\omega_n t + \phi), \qquad \omega_n = c \cdot k_n = \frac{n \pi c}{L}
+\]
+Each \textbf{spatial mode} vibrates at the corresponding \textbf{natural frequency} \( \omega_n \), forming an harmonic series.
+These are the \textbf{normal modes} of the vibrating string.
+
+The general solution of the vibrating string is the sum of normal modes:
+\[
+y(x, t) = \sum_{n=1}^{\infty} A_n \ y_n(x, t), \qquad
+y_n(x, t) = \sqrt{\frac{2}{L}} \sin(\omega_n t + \phi_n) \sin(k_n x)
+\]
+The coefficients \( A_n \) and \( \phi_n \) are determined by the initial conditions.
+Using the Werner trigonometric identity:
+\[
+2 \sin\alpha \sin\beta = \cos(\alpha - \beta) - \cos(\alpha + \beta)
+\]
+We can rewrite each mode as
+\[
+y_n(x, t) = \sqrt{\frac{1}{2L}} \left[ \cos(k_n(ct - x) + \phi_n) - \cos(k_n(ct + x) + \phi_n) \right]
+\]
+Each mode \( y_n(x, t) \) is a \textbf{standing wave} formed by the \textbf{superposition of two sinusoidal waves} travelling in opposite directions at speed \( c \).
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{D’Alembert vs. Fourier: Apparent Differences, Same Foundation}]
+Although the D’Alembert and Fourier solutions may appear different at first, they are equivalent under ideal conditions (i.e. fixed ends, uniform wave speed).
+
+\textbf{D’Alembert:} The solution is expressed as the sum of two travelling waves:
+\[
+y(x,t) = y^+(ct - x) + y^-(ct + x)
+\]
+\textbf{Fourier:} The solution is a superposition of standing waves (normal modes), representing a combination of many oscillating frequencies:
+\[
+y(x,t) = \sum_{n=1}^\infty A_n \sin(k_n x) \sin(\omega_n t + \phi_n)
+\]
+The D'Alembert solution can be obtained from the Fourier series by applying trigonometric identities, showing that the two approaches are mathematically equivalent under ideal conditions, such as fixed boundaries and uniform wave propagation.
+
+\textbf{Modal methods}, which involve breaking down a system into normal modes (like in Fourier series), are more generally applicable. They can describe systems that can't be fully captured by travelling waves, such as in the case of a vibrating beam or other complex mechanical systems where waves are reflected or interact in non-trivial ways.
+\end{tcolorbox}
+
+
+\subsection{Modelling approaches}
+There are three main approaches to physical modelling, depending on the level of abstraction and the structure of the system:
+
+\begin{enumerate}
+  \item \textbf{Lumped models} use a small number of variables and are described by \textbf{ordinary differential equations} (ODEs). These models assume that the physical quantities are concentrated at discrete points. They can be formulated using Kirchhoff variables or wave variables  - called also scattering parameters (i.e. in Wave Digital Filters).
+
+  \item \textbf{Distributed models} are based on \textbf{partial differential equations} (PDEs), which describe how physical quantities vary across space and time (such as in transmission lines). These models include:
+  \begin{itemize}
+    \item Finite difference (FD) methods (brute force), which discretize the PDEs directly.
+    \item Discretization of the general solution of the PDEs, as in digital waveguide (DWG) methods.
+  \end{itemize}
+
+  \item \textbf{Cellular approaches} decompose the system into many \textbf{interacting particles} (called Cordis-Anima, developed in France, Grenoble), connected by \textbf{physical forces}. This approach is useful for modelling complex non-linear behaviours and captures both geometry and interaction forces at a microscopic level.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{lumped.png}
+    \includegraphics[width=0.45\linewidth]{distributed.png}
+    \includegraphics[width=0.2\linewidth]{cellular.png}
+    \caption{modelling approaches - lumped (right), distributed (center) and cellular models (right)}
+\end{figure}
+
+\subsection{Functional Blocks}
+
+A common structure in PMS is given:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Functional blocks.png}
+    \caption{Functional blocks of a physical modelling system}
+\end{figure}
+
+We separate \textbf{exciter}, typically a non-linear dynamic system that generates energy (i.e. pluck or breath) and \textbf{resonator}, usually a linear system that shapes and sustains the sound.
+They are bidirectionally coupled and the resonator can also be modulated externally.
+This modular view helps describe the behaviour of many musical instruments.
+
+\subsection{Feed-Forward vs Feedback}
+
+\textbf{Feed-forward} structures feature a one-way flow of information, as in the source-filter model of LP-based speech synthesis (\textit{refer to DAAP module}), where excitation and filter are independent.
+
+\textbf{Feedback} structures involve mutual interaction between components, like in articulatory speech synthesis, where the vocal tract shape and the produced sound influence each other in a dynamic loop.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Feed-forward.png}
+    \hfill
+    \includegraphics[width=0.4\linewidth]{Feedback.png}
+    \caption{Feed-forward (left) and feedback model (right) for speech synthesis}
+\end{figure}
+
+% tclorobox with LPC from DAAP - excitation signal for vowels and consonants
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Linear Predictive Coding (LPC, \textit{refer to DAAP module})}]
+
+Linear Predictive Coding is a \textit{synthesis-by-analysis} technique for speech, where an adaptive filter is used to describe the formants of the letters (\textit{power spectrum envelope estimation}): it is a \textit{Wiener filtering problem} where the speech signal is both the analysis input and the desired output that determines the amount of error in the model approximation.
+
+\begin{center}
+    \includegraphics[width=0.75\linewidth]{LPC and Wiener.png}
+\end{center}
+
+As in SMS, the prediction error is used to define the excitation signal, which differs for vowels (train of impulses of period $T_0=1/f_0$) and consonants (white noise).
+
+\begin{center}
+    \includegraphics[width=1\linewidth]{Speech coding.png}
+\end{center}
+
+The entire pipeline is given by \textit{whitening filtering} (analysis) and \textit{shaping filtering} (synthesis):
+
+\begin{center}
+    \includegraphics[width=0.75\linewidth]{Whitening and shaping.png}
+\end{center}
+
+\end{tcolorbox}
+
+
+\subsection{Karplus-Strong Algorithm}
+
+\textbf{The Karplus-Strong algorithm} is an early yet powerful method for sound synthesis and a direct precursor of the waveguide approach.
+It is based on a simple \textbf{feedback loop} involving a \textbf{delay} and a \textbf{low-pass filter}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{KS poles_zeros.png}
+    \includegraphics[width=0.35\linewidth]{KS diagram.png}
+    \includegraphics[width=0.3\linewidth]{KS magnitude response.png}
+    \caption{Karplus-Strong algorithm - poles (left), block diagram (center) and magnitude response (right)}
+\end{figure}
+
+Structurally, it corresponds to an \textbf{IIR comb filter}, and we consider $\abs{g}<1$:
+\[
+y(n) = x(n) + g \cdot y(n - m)
+\quad \Rightarrow \quad
+Y(z) = X(z) + g \cdot Y(z) \cdot z^{-m}
+\quad \Rightarrow \quad
+H(z) = \frac{Y(z)}{X(z)} = \frac{1}{1 - g z^{-m}}
+\]
+
+This recursive system produces a \textbf{decaying periodic signal}, simulating plucked string behaviour with remarkable realism and efficiency.
+The filter has \( m \) poles, evenly distributed along the complex unit circle:
+\[
+p_l = \sqrt[m]{g} \ e^{j\frac{2l\pi}{m}}, \qquad l = 0, \cdots, m-1.
+\]
+
+This configuration generates a \textbf{harmonic spectrum} with frequency peaks located at \textbf{integer multiples} of the fundamental frequency:
+\[
+f_0 = \frac{F_s}{m} \ \text{[Hz]}, \qquad F_s: \text{sampling rate [Hz]}
+\]
+
+The result is a harmonic series resembling the behaviour of a \textbf{vibrating string}, producing a clearly defined pitch.
+If, instead, the sign of the wave was inverted at each reflection, the system would be:
+\[
+y(n) = x(n) - g \cdot y(n - m)
+\quad \Rightarrow \quad
+Y(z) = X(z) - g \cdot Y(z) \cdot z^{-m}
+\quad \Rightarrow \quad H(z) = \frac{1}{1 + g z^{-m}}.
+\]
+
+In this case, the frequency response changes significantly - the poles of the system are still equally spaced, but rotated:
+\[
+p_l = \sqrt[m]{g} \ e^{j\frac{(2l+1)\pi}{m}}, \qquad l = 0, \cdots, m-1.
+\]
+
+This configuration produces a \textbf{harmonic spectrum} where the frequency peaks lie only at \textbf{odd integer multiples} of the fundamental frequency:
+\[
+f_0 = \frac{F_s}{2m} \ \text{[Hz]}
+\]
+
+The Karplus-Strong algorithm aims at simulating the behaviour of a plucked string by reproducing:
+\begin{itemize}
+  \item an \textbf{almost perfectly harmonic spectrum},
+  \item \textbf{frequency-dependent decay}, where lower partials decay more slowly than higher ones.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{Plucked spectogram.png}
+    \caption{Spectogram of a plucked A2 guitar string}
+\end{figure}
+
+Comb filters produce spectra whose partials decay at the same rate.
+% \clearpage
+
+In order to achieve frequency-dependent decay, we insert a \textbf{low-pass filter (LPF)} in the \textbf{feedback loop}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{KS diagram 2.png}
+    \includegraphics[width=0.3\linewidth]{KS magnitude response 2.png}
+    \caption{Karplus-Strong with low-pass filtering - block diagram (left) and magnitude response (right)}
+\end{figure}
+
+The simplest LPF we can use is the following first-order FIR filter:
+\[
+y(n) = \frac{1}{2} \left( u(n) + u(n - 1) \right) \quad \Rightarrow \quad H(z) = \frac{1}{2}(1 + z^{-1})
+\]
+
+Importantly, the filter introduces a \textbf{half-sample delay}, which causes a \textbf{shift} in the \textbf{fundamental frequency} of the resulting comb structure:
+\[
+f_0 = \frac{F_s}{m + 1/2} \ \text{[Hz]}
+\]
+As a consequence, the upper partials are no longer exact integer multiples of the fundamental, \textbf{slightly detuning} the harmonic series.
+For instance, a shift of the perceived fundamental from 441 Hz to 439 Hz subtly affects timbre and pitch of the synthesized tone.
+
+The last term to define is the \textbf{input signal} $x(n)$: a  natural choice is to excite the filter with an impulse.
+However, we prefer a different strategy: instead of feeding an input signal, we initialise the system with a random sequence of $m$ samples (past values of $y$, \textbf{random initial state}).
+While this has no direct physical interpretation, it provides strong excitation in the high-frequency region.
+The perceptual effect is a \textbf{noisy transient} at the onset, followed by a \textbf{sustained harmonic tone} - reproducing the behaviour of plucked strings in real instruments.
+
+\subsection{Fractional Delays for Fine Tuning}
+
+The \textbf{fundamental pitch} $f_0$ of the \textbf{Karplus-Strong algorithm} depends on the number $m$ of delay samples.
+For a simple comb filter we defined:
+\[
+f_0 = \frac{F_s}{m} \ \text{[Hz]}, \qquad m \in \mathbb{N}
+\]
+The \textbf{minimum frequency difference} $\Delta f$ we can appreciate is the pitch difference we obtain when we add a single delay samples:
+\[
+\Delta f = \frac{F_s}{m} - \frac{F_s}{m+1} = \frac{F_s}{m(m+1)} 
+\]
+
+Considering, for example, $F_s=44$ KHz and $m=$ 100:
+\[
+f_0 = 440 \ \text{Hz}, \qquad
+\Delta f = \frac{F_s}{m(m+1)} = 4.36 \ \text{Hz} > \text{JND}
+\]
+
+We want $\Delta f$ to be smaller than the \textbf{Just Noticeable Difference (JND)}.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Just Noticeable Difference (JND, \textit{refer to DAAP module})}]
+The minimum frequency difference the human hearing system is able to perceive is the Just Noticeable Difference (JND): L'ANNA PENSA SIANO AL CONTRARIO, O.5 PER >=600 E 3 SE <
+\[
+\left\{
+\begin{array}{lc}
+    \text{JND} = 0.5\% \ f, & f \leq 600 \text{ Hz} \\
+    \text{JND} = 3 \text{ Hz}, & f > 600 \text{ Hz}
+\end{array}
+\right.
+\] 
+\end{tcolorbox}
+
+The frequency resolution $\Delta f$ we have for \textbf{integer delay} $m$ is not accurate enough, in particular in musical context.
+Therefore, we introduce \textbf{fractional delays} to achieve more accurate tuning: it allows interpolation between discrete delay values, allowing finer control over the resulting pitch.
+An \textbf{ideal delay} of $m$ samples has \textbf{transfer function}:
+\[
+H_m(z) = z^{-m} \quad \Rightarrow \quad
+H_m(e^{j\omega}) = e^{-j\omega m}, \quad \omega = 2\pi \frac{f}{F_s} \in \left[ 0 , \pi \right] \ \ \text{in [rad]}
+\]
+
+This system has \textbf{flat magnitude response} and a \textbf{linear phase}:
+\[
+\abs{H_m(e^{j\omega})} = 1, \qquad \angle(H_m(e^{j\omega})) = -\omega m
+\]
+
+To achieve accurate tuning, we require the slope of the phase to correspond to an arbitrary non-integer delay $\tau_{\mathrm{ph}}$.
+We can write it as sum of integer delay and fractional contribution:
+\[
+\tau_{\mathrm{ph}} = \lfloor \tau_{\mathrm{ph}} \rfloor + \Delta \tau_{\mathrm{ph}}, \qquad \lfloor \tau_{\mathrm{ph}} \rfloor \in \mathbb{N} \ \text{(floor)}, \qquad 0 < \Delta \tau_{\mathrm{ph}} < 1
+\]
+
+Implementing the fractional delay $\Delta \tau_{\mathrm{ph}}$ requires interpolation between samples, typically using all-pass filters or FIR-based fractional delay filters (refer to \textit{Fractional Delay Filters} section). This enables precise control over the pitch, crucial for musical applications.
+
+% The ideal fractional delay filter is defined by the frequency response:
+% \[
+% H^{\text{id}}_{\tau_{\mathrm{ph}}}(e^{j\omega}) = e^{-j\omega \tau_{\mathrm{ph}}},
+% \]
+% which corresponds to a pure delay of $\tau_{\mathrm{ph}}$ samples (not necessarily an integer). Its impulse response is obtained via inverse Fourier transform:
+% \[
+% h^{\text{id}}_{\tau_{\mathrm{ph}}}(n) = \frac{1}{2\pi} \int_{-\pi}^{\pi} e^{-j\omega \tau_{\mathrm{ph}}} e^{j\omega n} \ d\omega = \text{sinc}(n - \tau_{\mathrm{ph}}),
+% \]
+% where $\text{sinc}(x) = \frac{\sin(\pi x)}{\pi x}$.
+
+% The corresponding time-domain output of the filter is:
+% \[
+% y(n) = \sum_k x(k) \ h^{\text{id}}_{\tau_{\mathrm{ph}}}(n - k),
+% \]
+
+% When $\tau_{\mathrm{ph}} = m$ is an integer, the sinc function collapses into a delta function:
+% \[
+% h^{\text{id}}_{\tau_{\mathrm{ph}}}(n) = \delta(n - m),
+% \]
+% and the filter becomes a simple integer delay.
+% However, since $\text{sinc}(n - \tau_{\mathrm{ph}})$ has infinite support, this filter is non-causal and must be approximated in practical systems (i.e. by truncation and windowing). Despite this, it serves as the theoretical reference for designing fractional delay filters in applications such as pitch tuning and physical modelling of musical instruments.
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.4\linewidth]{Frac delay IR.png}
+%     \caption{Fractional delay impulse response}
+% \end{figure}
+
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.35\linewidth]{int delay.png}
+%     \includegraphics[width=0.35\linewidth]{frac delay.png}
+%     \caption{Integer vs non-integer delay}
+% \end{figure}
+
+% To obtain a practical implementation of a fractional delay, we approximate the ideal impulse response using a finite-length FIR filter:
+% \[
+% H_{\tau_{\mathrm{ph}}}(z) = \sum_{k=0}^{N} b_k z^{-k}.
+% \]
+% One simple approach consists of truncating the ideal infinite impulse response to a finite window:
+% \[
+% h_{\tau_{\mathrm{ph}}}(n) =
+% \begin{cases}
+% \text{sinc}(n - \tau_{\mathrm{ph}}), & 0 \leq n \leq N, \\
+% 0, & \text{otherwise}.
+% \end{cases}
+% \]
+% In order to minimize the approximation error, the desired delay $\tau_{\mathrm{ph}}$ should lie close to the center of the filter window. Specifically:
+% \begin{itemize}
+%   \item If $N$ is odd ($L = N + 1$ is even), then $\tau_{\mathrm{ph}}$ should lie between the two central taps (samples).
+%   \item If $N$ is even ($L$ is odd), then $\tau_{\mathrm{ph}}$ should be close to the central tap.
+% \end{itemize}
+
+% \noindent Mathematically, this translates to the condition:
+% \[
+% \frac{N - 1}{2} \leq \tau_{\mathrm{ph}} \leq \frac{N + 1}{2}.
+% \]
+
+% This ensures that the main lobe of the sinc function is well centered within the window, improving phase linearity and amplitude accuracy of the delay.
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.4\linewidth]{delay IIR mag.png}
+%     \includegraphics[width=0.4\linewidth]{delay IIR phase.png}
+%     \caption{FIR approximation of fractional delay - magnitude (left) and phase response (right)}
+% \end{figure}
+
+\subsection{Discretization of Lumped Models (\textit{background})}
+
+Lumped element models are widely used to describe physical systems by assembling discrete components. These systems, although different in nature, are all typically modelled through systems of ordinary differential equations (ODEs). Common examples include:
+\begin{itemize}
+    \item \textbf{Electrical circuits}: capacitors, resistors and inductors are connected through series and parallel junctions;
+    \item \textbf{Mechanical systems}: masses linked by springs and dampers, acting as mechanical resonators;
+    \item \textbf{Acoustic systems}: bores, cavities, pipes and acoustic holes are interconnected to represent sound propagation.
+\end{itemize}
+
+The different techniques presented below in this section are to be considered as \textit{background material}.
+
+\subsubsection{Impulse-invariant discretization}
+Starts from a rational transfer function $\Gamma(s)$ expanded in partial fractions:
+
+\[
+\Gamma(s) = \frac{B(s)}{A(s)} = \frac{\sum_{k=0}^M b_k s^{M-k}}{\sum_{k=0}^M a_k s^{N-k}} \quad \Rightarrow \quad \Gamma(s) = \sum_{k=1}^N \frac{K_k}{s-p_k}
+\]
+
+Inverse Laplace transform and sampling ($T_s$) yield the discrete-time response:
+\[
+\gamma(t) = \mathscr{L}^{-1} \left\{ \Gamma(s) \right\} = \sum_{k=1}^N K_k e^{p_k t} \Rightarrow  \gamma_d[n] = \gamma(nT_s) = \sum_{k=1}^N K_k \left( e^{p_k T_s} \right)^n \Rightarrow  \Gamma_d(z) =  \sum_{k=1}^N \frac{K_k}{1-p_{d,k}z^{-1}}  
+\]
+
+The poles of the discrete system are $p_{d,k} = e^{p_k T_s}$. So if you knowthe analoog poles you can directly compute the digital pole.
+In signal processing this method is the basic one but not the best in our case.
+
+\subsubsection{Finite Difference schemes and $s$-to-$z$ mapping}
+
+Stability is preserved at any sample rate if the continuous system is stable.
+The DT response is a periodization of the CT response:
+
+\[
+\Gamma_d(e^{j\omega}) = \sum_{k=-\infty}^{+\infty} \Gamma \left( j\frac{\omega}{T_s} + j\frac{2k\pi}{T_s} \right)
+\]
+
+Aliasing can occur if bandwidth exceeds Nyquist frequency.
+An alternative approach consist in replacing time derivatives with \textbf{finite differences} and turning ODEs into \textbf{difference equations}:
+\begin{itemize}
+    \item CT derivative corresponds to a multiplication by $s$
+    \item DT unit delay corresponds to a multiplication by $z^-1$
+\end{itemize}
+
+Approximation derivatives with finite differences leads to $s = g(z)$ mapping:
+
+\[
+\Gamma_d(z) = \Gamma(g(z))
+\]
+
+An example of FD scheme is the \textbf{Backward Euler} method, where the first derivative is approximated as an incremental ratio and the $s$-to-$z$ mapping is given by:
+
+\[
+\frac{dx}{dt}(nT_s) \approx \frac{x[n] - x[n-1]}{T_s} \quad \Rightarrow \quad s \approx \frac{1-z^{-1}}{T_s}
+\]
+
+While the central difference is the approximation of the second derivative:
+
+\[
+\frac{d^2 x}{dt^2} (nT_s) \approx \frac{x[n] - 2x[n-1] + x[n-2]}{T_s^2}
+\]
+
+Incremental ratio approximates the derivative of x(t) avaraged between $nT_s$ and $(n-1)T_s$:
+
+\[
+\frac{dx}{dt}(nT_s) = \frac{\dot{x}(nT_s) + \dot{x}\left((n-1)T_s\right)}{2} \approx \frac{x[n] - x[n-1]}{T_s} \quad \Rightarrow \quad s \approx 2F_s \frac{1 - z^{-1}}{1 + z^{-1}}
+\]
+
+Implicit difference equations arise (Adams-Moulton method).
+The area of stability of this method is much larger with respect to the Euler method - and so it is desirable:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.36\linewidth]{stability mapping.png}
+    \caption{Stability of mappings - Euler and bilinear methods}
+\end{figure}
+
+The bilinear transform maps the imaginary axis to the unit circle, which introduces \textbf{frequency warping}:  
+\[
+j \omega = \frac{2}{T_s} \frac{1-e^{-j\omega_d}}{1+e^{-j\omega_d}} = \frac{2j}{T_s} \tan \left( \frac{\omega_d}{2} \right) \quad \Rightarrow \quad
+\omega_d = 2 \arctan\left(\frac{\omega T_s}{2}\right)
+\]
+This mapping is \textit{non-linear}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{frequency warping.png}
+    \includegraphics[width=0.35\linewidth]{frequency warping 2.png}
+    \caption{Frequency warping - Discrete frequency mapping (left) and discrete frequency response mapping (right)}
+\end{figure}
+
+\subsection{Ideal String FD Scheme}
+The displacement $y(t,x)$ of an \textbf{ideal vibrating string} - with constant \textit{tension} $T$ and constant \textit{linear mass density} $\mu$ - is solution of the following 1D wave equation:
+\[
+T \frac{\partial^2 y}{\partial x^2} = \mu \frac{\partial^2 y}{\partial t^2}
+\]
+
+This equation tells us that curvature and acceleration are proportional to each other.
+By rearranging the terms, this leads to the \textbf{standard wave equation}:
+\[
+\frac{\partial^2 y}{\partial x^2} = \frac{1}{c^2} \frac{\partial^2 y}{\partial t^2}, \qquad c = \sqrt{\frac{T}{\mu}}: \text{propagation velocity [m/s]}
+\]
+
+The physical quantities involved include:
+\begin{itemize}
+  \item \textbf{Velocity:} \( \dot{y} \triangleq \partial y/ \partial t \)
+  \item \textbf{Acceleration:} \( \ddot{y} \triangleq \partial^2 y / \partial t^2 \)
+  \item \textbf{Slope:} \( y' \triangleq \partial y/ \partial x \)
+  \item \textbf{Curvature/Bending:} \( y'' \triangleq \partial^2 y / \partial x^2 \)
+\end{itemize}
+
+\subsubsection{Finite Difference}
+
+The \textbf{wave equation discretization} consists in converting all derivatives (in this case second derivatives) into finite differences.
+We remind the first derivative (in space) approximations:
+
+\begin{itemize}
+    \item \textbf{Forward difference:} 
+    \[
+    f'(x) \approx \frac{f(x + X_s) - f(x)}{X_s}
+    \]
+    \item \textbf{Central difference:} 
+    \[
+    f'(x) \approx \frac{f(x + X_s) - f(x - X_s)}{2X_s}
+    \]
+    \item \textbf{Backward difference:} 
+    \[
+    f'(x) \approx \frac{f(x) - f(x - X_s)}{X_s}
+    \]
+\end{itemize}
+
+We introduce the \textbf{discrete indexes} $n$ and $k$ - for time and space respectively - to indicate discrete time and space points - where time and space steps are $X_s$ and $T_s$.
+The \textbf{second derivatives} - in time and space respectively - are the result of two derivative approximations (forward and backward differences):
+\begin{align*}
+    y''(t=t_n,x=x_k) & = \frac{y(n,k+1) - 2y(n,k) + y(n,k-1)}{X_s^2}\\
+    \ddot{y}(t=t_n,x=x_k) & =\frac{y(n+1,k) - 2y(n,k) + y(n-1,k)}{T_s^2}
+\end{align*}
+
+We apply these approximations into the wave equation:
+\[
+\frac{1}{T_s^2} \left[ y(n+1,k) - 2y(n,k) + y(n-1,k) \right] = \frac{c^2}{X_s^2} \left[ y(n,k+1) - 2y(n,k) + y(n,k-1) \right]
+\]
+
+The \textbf{Friedrichs--Lewy condition} guarantees numerical stability in FD schemes and states that the \textbf{Courant number} \( R \) must satisfy:
+\[
+R = \frac{ X_s}{c T_s} \leq 1
+\]
+
+This ensures that \textit{waves do not propagate faster than one spatial interval per time step}.
+In the extreme case of $R=1$:
+\[
+X_s = c T_s \quad \Rightarrow \quad y(n + 1, k) = y(n, k + 1) + y(n, k - 1) - y(n - 1, k)
+\]
+
+This case is known as the \textbf{leapfrog scheme}, commonly used for time-stepping in ideal string simulations.
+The update at a given time does not depend only on the immediatly previous one, "leaping" over intermediate steps y(n,k), hence the name. The figure below illustrates the flow of information in time and space:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{image.png}
+    \caption{Leapfrog recursion (right) with time and space references (left)}
+\end{figure}
+
+The leapfrog method is often not practical due to its dependence on two past time steps and the difficulty in \textbf{handling boundary conditions} and \textbf{initialization}. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{fdtd scheme.png}
+    \caption{Spatio-temporal representation of the leapfrog scheme (a) and of a finite difference scheme (b)}
+\end{figure}
+
+An alternative and intuitive way to represent the \textbf{finite difference time domain (FDTD)} scheme is through a \textbf{spatio-temporal grid}.
+In this diagram, the horizontal axis corresponds to space (position along the string), while the vertical axis represents time steps.
+Each grid point represents the value of the solution \( y(n,k) \) at a given time \( n \) and position \( k \).
+The update rule is visualized in the figure, where the value at time \( n+1 \) and position \( k \) (black dot) is computed from the neighbouring values at the current time \( n \) and the previous value at \( n-1 \).
+
+\subsubsection{Boundary Conditions}
+
+In 1D FD schemes (as in more dimensions), the spatial index \( k \) must lie between 0 and \( L_{\text{nom}} \) to access all space nodes.
+Some problems arise when computing the displacement near the string boundaries, considering that the scheme may \textit{require access to space positions outside the discretization grid}: we need to introduce \textbf{boundary conditions} to describe the displacement behaviour for $k=0$ and $k=L_\text{nom}$.
+
+The \textbf{rigid ends condition} states:
+\[
+y(n, 0) = y(n, L_{\text{nom}}) = 0
+\]
+This conditions result in a phase-inverting reflections, as we find in fixed-end strings.
+Alternatively, more flexible boundary models describe partial reflection: we talk about \textbf{lossy terminations} when the incident wave impacting on an end of the string results in both reflected and absorbed terms.
+\[
+\begin{aligned}
+y(n+1, 0) &= (1 - r_L) \cdot y(n, 1) + r_L \cdot y(n-1, 0) \\
+y(n+1, L_{\text{nom}}) &= (1 - r_R) \cdot y(n, L_{\text{nom}} - 1) + r_R \cdot y(n-1, L_{\text{nom}})
+\end{aligned}
+\]
+
+The constants \( r_L \) and \( r_R \) are \textbf{reflection coefficients} - for $x=0$ and $x=L_\text{nom}$ respectively -  that model energy loss or absorption at the string boundaries.
+
+\subsubsection{Initial Condition (String Excitation)}
+
+To simulate a \textbf{plucked string}, the simplest method is to set the \textbf{initial shape of the string} as if it had just been plucked and then let it evolve over time.
+A common choice for this initial condition is a \textbf{triangular shape} with zero initial velocity (point of excitation between arbitrary indexes $j$ and $j+1$).
+The displacement at the first time step is:
+\[
+y(1, k) =
+\begin{cases}
+y(0, k), & k \neq j, j+1 \\
+\frac{1}{2} \left[ y(0, k - 1) + y(0, k + 1) \right], & k = j, j+1
+\end{cases} \qquad k=0,1,\cdots,L_\text{nom}
+\]
+
+Another way to simulate real-time interaction with the string is to add an \textbf{external excitation signal} \( u(n) \) during the simulation.
+This is usually done by updating two neighbouring points symmetrically:
+\[
+\begin{aligned}
+y(n, k) &\leftarrow y(n, k) + \frac{1}{2} u(n) \\
+y(n, k + 1) &\leftarrow y(n, k + 1) + \frac{1}{2} u(n)
+\end{aligned}
+\]
+
+This method simulates an excitation that spreads from the impact point toward both sides of the string.
+
+\subsubsection{Dampening Loss}
+
+We can introduce \textbf{frequency-independent loss} in the FD model of the string by adding and discretizing the \textbf{damping terms} of the following lossy 1D wave equation:
+\[
+T y'' = \mu \ddot{y} + d_1 \dot{y} - d_2 \dot{y}''
+\]
+The damping coefficient $d_1$ accounts for \textbf{frequency-independent} (uniform) damping, while the damping coefficient $d_2$ models \textbf{frequency-dependent} damping (greater at higher frequencies).
+
+The last term $\dot{y}''$ is a \textit{mixed time-space derivative} - instead of a third-order time derivative - because the third-order time derivative term tends to make the system ill-posed and can lead to numerical instability if the temporal and spatial sampling frequencies are high enough.
+
+If we focus only on $d_1$, we need to approximate a first time derivative with a central difference:
+\[
+\dot{y}(n,k)=\frac{y(n+1,k) - y(n-1,k)}{T_s}
+\]
+
+This results in the following leapfrog scheme:
+\[
+y(n+1, k) = g_k \left[ y(n, k+1) + y(n, k-1) \right] - a_k y(n-1, k), \qquad
+g_k = \frac{1}{1 + d_1 \frac{T_s}{2}}, \qquad a_k = \frac{1 - d_1 \frac{T_s}{2}}{1 + d_1 \frac{T_s}{2}}
+\]
+
+The \textbf{string decay time} $\tau$ - defined as the time required to have a relative amplitude decay of $1/e$ - is directly related to $d_1$:
+\[
+d_1 = \frac{1}{2\tau}
+\]
+
+This provides an intuitive way to control energy loss in the simulation.
+
+\subsubsection{String Stiffness}
+We can simulate the \textbf{dispersive behaviour} of real strings by including \textbf{stiffness effects} (important in grand piano), defining the following stiff wave equation:
+\[
+T y'' = \mu \ddot{y} + D y'''', \quad D = \frac{E \pi r_s^4}{4}
+\]
+
+The constant \( E \) is the \textbf{Young’s modulus}, while \( r_s \) is the \textbf{cross-sectional radius} of the string.
+The stiffness term \( D y'''' \) accounts for the inharmonicity introduced by bending rigidity.
+As a result, the FD equation includes three additional spatio-temporal terms, making the system more complex - but also more physically accurate.
+
+\begin{tcolorbox}[colback=black!5!white, colframe=black, title=\textbf{Discrete-time Modelling of ODEs and PDEs}]
+For \textbf{lumped systems} (ODE-based), which have a finite number of degrees of freedom and linear behaviour, it is common to derive a \textbf{transfer function} in the Laplace domain and then convert it to the discrete-time domain using techniques such as the bilinear transform. 
+
+In contrast, \textbf{distributed systems} (PDE-based), which involve continuous variation over space and time, typically require a \textbf{finite difference (FD)} scheme to discretize both temporal and spatial derivatives. This leads to grid-based time-stepping algorithms.
+\end{tcolorbox}
+
+
+\subsection{Cellular Approach for Mass-Spring Networks}
+Unlike finite difference methods, \textbf{cellular methods} break down the physical system into elementary components - \textbf{atomization} process - before applying any discretization.
+The system is modelled as a network of lumped \textbf{mass elements} interconnected by \textbf{springs} and \textbf{dampers}, approximating the behaviour of a distributed medium: the mass elements are treated as nodes - representing \textbf{inertia} - while springs and dampers serve as links - modelling the \textbf{physical force exchanges} between masses.
+
+This description is usually based on \textit{dual-variable pairs} (i.e. \textbf{Kirchhoff variables}), like position–velocity or force–velocity.
+Each element is locally discretized using FD schemes - rather than applying the discretization to the entire system at once.
+
+Since the interactions are theoretically instantaneous, \textbf{delay-free feedback loops} can occur, violating causality: both the force \( f(n) \) and the displacement \( x(n) \) depend simultaneously on each other at the same time instant.
+As a result, it becomes impossible to compute either variable first, creating an \textbf{instantaneous logical loop}.
+To avoid this, we introduce \textbf{artificial delays}, forcing a sequential (interleaved) update of the interacting elements: we first update one element, the we compute the second element response consequently.
+
+The key difference with FD schemes lies in the modelling philosophy: finite difference methods directly discretize continuous equations, while cellular methods construct the system as a \textbf{network of interacting modules}.
+
+Let’s consider the following example with two masses $m_{1,2}$ and a spring of stiffness $k$, where the masses can move along the \textit{x}-axis and we apply an external force $f$ upon the first mass:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\linewidth]{1d mech system.png}
+    \caption{1D mechanical system - masses $m_{1,2}$, spring $k$ and positions $x_{1,2}$}
+\end{figure}
+The mass dynamic attributes are: mass \( m \), displacement \( x(t) \), velocity \( v(t) \), acceleration \( a(t) \) and total force \( f(t) \) acting upon it.
+The spring behaviour is defined by its spring constant \( k \), its natural length \( l_0 \) and its instantaneous length under tension \( l(t) \). The spring generates a restoring force proportional to the difference between \( l(t) \) and \( l_0 \).
+
+We express all physical laws to fully model the behaviour of the \textbf{mass–spring system}.
+The \textbf{Newton's laws} of each mass and the \textbf{Hooke's law} of the spring are:
+\[
+f_1(t) = m_1 a_1(t) = m_1 \ddot{x}_1(t), \quad
+f_2(t) = m_2 a_2(t) = m_2 \ddot{x}_2(t), \quad
+f_3(t) = k (l_0 - l(t))
+\]
+
+The spring connects the two masses, so its instantaneous length $l(t)$ is the difference between the positions $x_{1,2}(t)$ of the masses:
+\[
+l(t) = x_2(t) - x_1(t)
+\]
+This expression is analogous to Kirkhoff's current low.
+The \textbf{force balance equations} in each mass state that:
+\[
+f_1(t) = f(t) - f_3(t), \quad
+f_2(t) = f_3(t)
+\]
+
+These expressions are analogous to Kirchhoff's voltage laws.
+
+We apply a FD scheme to implement the \textbf{numerical simulation}.
+We approximate the second derivatives using forward differences:
+\begin{align*}
+    f_1(t) = m_1 \ddot{x}_1(t) \quad & \Rightarrow \quad x_1(n) = \frac{f_1(n)}{m_1} + 2x_1(n{-}1) - x_1(n{-}2) \\
+    f_2(t) = m_2 \ddot{x}_2(t) \quad & \Rightarrow \quad x_2(n) = \frac{f_2(n)}{m_2} + 2x_2(n{-}1) - x_2(n{-}2)
+\end{align*}
+
+The spring behaves as a \textbf{two-port element} that computes the interaction forces based on the input displacements:
+\[
+f_3(n) = k \left( l_0 - x_2(n) + x_1(n) \right), \quad
+f_1(n) = f - f_3(n), \quad
+f_2(n) = f_3(n)
+\]
+
+The diagram shows two fundamental components of the mass-spring model:
+
+\begin{itemize}
+    \item A \textbf{one-port mass element}, which computes the displacement \( x(n) \) from the input force \( f(n) \), using a finite difference scheme with two delay elements;
+    \item A \textbf{two-port spring element}, that takes the displacements \( x_1(n) \) and \( x_2(n) \) as inputs and returns the interaction force \( f_3(n) \), determined by the spring law.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{mass_spring network.png}
+    \includegraphics[width=0.5\linewidth]{mass_spring network 2.png}
+    \caption{Mass-spring network}
+\end{figure}
+
+The right-hand diagram shows the direct interconnection of the mass and spring modules through shared variables: this creates a \textbf{non-computable loop}, since both blocks depend on each other's outputs at the same time instant.
+To resolve this computation issue, we need to introduce a delay between the elements, which enforces \textbf{causality}: displacements at time \( n \) are computed using forces evaluated at time \( n-1 \).
+
+This approach is used in the \textbf{Cordis-Anima system}, where the link computes two separate forces \( f_{3,1}(n) \) and \( f_{3,2}(n) \), each applied to one of the connected masses.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{cordis anima.png}
+    \caption{Cordis-Anima Implementation}
+\end{figure}
+
+Cordis-Anima is a modular physical modeling framework where systems are built from two primitive elements: matter points (concentrated mass) and link elements (connection between masses). Together they form a network of mass–spring–damper blocks.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{cordis.png}
+    \caption{Matter point (left) and link (right) elements}
+\end{figure}
+
+Instruments can be built out of these blocks
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.58\linewidth]{cellular model.png}
+    \caption{Cellular model - reconstruction of a mass-spring-damper system}
+\end{figure}
+
+The Cordis-Anima system sometimes led to unexpected or unintuitive behaviours in the simulation.
+
+\subsection{Modal Synthesis}
+This approach can be seen as a \textbf{lumped physical modelling} technique or, alternatively, as a\textit{ source-filter system }where the source is the \textit{excitation} and the filter is a \textit{bank of second-order resonators}.
+
+Although the mathematical and physical foundations of modal synthesis are not always immediately intuitive, they are essentially the same for both discrete systems (mass-spring-damper networks) and continuous systems (PDEs in space and time).
+
+The main strength of modal synthesis lies in its \textbf{generality}: it can be applied to a broad class of sounding physical systems, in contrast to more restrictive methods - such as waveguide synthesis - which are mostly limited to D’Alembert-like equations.
+Neither modal nor WGN approaches address the key issue of \textit{non-linear interaction between blocks}.
+
+The sound of a resonating object is represented as a linear combination of the outputs of N
+second-order oscillators, each representing one mode of oscillation of the object excited by
+a driving force or acoustic pressure
+
+\subsubsection{Normal Modes in ODEs}
+Let us recall the following example:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\linewidth]{two masses system.png}
+    \caption{Modal decomposition - two masses system}
+\end{figure}
+
+The system description is:
+\[
+\begin{cases}
+m \ddot{x}_1(t) + k x_1(t) + k\ (x_1(t) - x_2(t)) &= 0 \\
+m \ddot{x}_2(t) + k x_2(t) + k\ (x_2(t) - x_1(t)) &= 0
+\end{cases}, \qquad
+\begin{pmatrix}
+q_1 \\
+q_2
+\end{pmatrix} = 
+\begin{bmatrix}
+1 & 1 \\
+1 & -1
+\end{bmatrix}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix} \quad \Rightarrow \quad
+\begin{cases}
+\ddot{q}_1 &= -\omega_0^2 q_1 \\
+\ddot{q}_2 &= -3\omega_0^2 q_2
+\end{cases}, \quad \omega_0^2 = \frac{k}{m}
+\]
+
+The ODEs in matrix form are:
+\[
+\underbrace{
+\begin{bmatrix}
+m & 0 \\
+0 & m
+\end{bmatrix}}_{[\mathrm{M}]}
+\begin{pmatrix}
+\ddot{x_1} \\
+\ddot{x_2}
+\end{pmatrix}
++
+\underbrace{
+\begin{bmatrix}
+2k & -k \\
+-k & 2k
+\end{bmatrix}}_{[\mathrm{K}]}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+=
+\begin{pmatrix}
+0 \\
+0
+\end{pmatrix}
+\quad \Rightarrow \quad [\mathrm{M}]\underline{\ddot{\mathrm{x}}} + [\mathrm{K}] \underline{\mathrm{x}} = \underline{0}
+\]
+
+More generally, we can describe a physical model using $N$ \textit{undamped oscillators}, whose non\textit{-homogeneous} matrix equation is:
+\[
+[\mathrm{M}]\underline{\ddot{\mathrm{x}}} + [\mathrm{K}] \underline{\mathrm{x}} = \underline{\mathrm{f}}
+\]
+
+The \textbf{mass matrix} $[\mathrm{M}]$ is generally \textbf{diagonal}, while the \textbf{stiffness matrix} $[\mathrm{K}]$ is generally \textbf{non-diagonal}.
+We suppose that the solution $\underline{\mathrm{x}}$ of the homogeneous expression $\left(\underline{\mathrm{f}}=0\right)$ is a set of sinusoidal functions:
+\[
+\underline{\mathrm{x}}(t) = \underline{\mathrm{s}} \sin \left( \omega t + \phi \right) \quad \Rightarrow \quad [\mathrm{M}]\underline{\ddot{\mathrm{x}}} + [\mathrm{K}] \underline{\mathrm{x}} = -\omega^2 [\mathrm{M}] \underline{\mathrm{s}} \sin \left( \omega t + \phi \right) + [\mathrm{K}] \underline{\mathrm{s}} \sin \left( \omega t + \phi \right) = \underline{0}
+\]
+
+% \clearpage
+
+We obtain an \textbf{eigenvalue-eigenvector problem}:
+\[
+[\mathrm{K}] \underline{\mathrm{s}} = \omega^2 [\mathrm{M}] \underline{\mathrm{s}} \quad \Rightarrow \quad [\mathrm{M}]^{-1} [\mathrm{K}] \underline{\mathrm{s}} = \omega^2 \underline{\mathrm{s}}
+\]
+
+We find \( N \) pairs of eigenvalues \( \omega \) and eigenvectors \( \underline{\mathrm{s}} \) (the vector $\underline{\mathrm{s}}$ has $N$ amplitude values, one per each oscillator). These eigenvectors are \textbf{orthogonal} with respect to the mass and stiffness matrixes:
+\[
+\underline{\mathrm{s}}_i^T [\mathrm{M}] \ \underline{\mathrm{s}}_j = \delta_{ij} m_i, \qquad 
+\underline{\mathrm{s}}_i^T [\mathrm{K}] \ \underline{\mathrm{s}}_j = \delta_{ij} k_i, \qquad \delta_{ij}=\begin{cases}
+    1, \text{ if } i=j \\
+    0, \text{ else}
+\end{cases},
+\qquad  
+k_i = \omega_i^2 m_i
+\]
+
+The set of eigenvectors \( \underline{\mathrm{s}}_i \) can be used to define a \textbf{modal transformation} - a change of spatial coordinates - that transforms the original system into a set of \( N \) \textit{uncoupled oscillators}:
+\[
+\underline{\mathrm{x}} = [\mathrm{S}] \underline{\mathrm{q}} \quad \Leftrightarrow \quad 
+\underline{\mathrm{q}} = [\mathrm{S}]^{-1} \underline{\mathrm{x}} = [\mathrm{S}]^T \underline{\mathrm{x}}, \qquad [\mathrm{S}] = \left[ \underline{s}_1,\cdots, \underline{s}_N \right]_{N \times N}: \text{eigenvector matrix}
+\]
+
+The eigenvector matrix $[\mathrm{S}]$ is \textbf{orthogonal} (i.e. rotation matrixes are orthogonal as well), whose definition is:
+\[
+[\mathrm{S}][\mathrm{S}]^T = [I]_{N \times N} \quad \text{the identity matrix}
+\]
+
+By applying the modal transformation to the original system:
+\[
+[\mathrm{M}] \ddot{\underline{\mathrm{x}}} + [\mathrm{K}] \underline{\mathrm{x}} = \underline{\mathrm{f}}
+\quad \Rightarrow \quad
+[\mathrm{M}][\mathrm{S}] \ddot{\underline{\mathrm{q}}} + [\mathrm{K}][\mathrm{S}] \underline{\mathrm{q}} = \underline{\mathrm{f}}
+\quad \Rightarrow \quad
+\underbrace{[\mathrm{S}]^T [\mathrm{M}][\mathrm{S}]}_{[\mathrm{M_q}]} \ \ddot{\underline{\mathrm{q}}} + \underbrace{[\mathrm{S}]^T [\mathrm{K}][\mathrm{S}]}_{[\mathrm{K_q}]} \ \underline{\mathrm{q}} = [\mathrm{S}]^T \underline{\mathrm{f}}
+\]
+
+Defining the diagonal matrixes $[\mathrm{M_q}]$ and $[\mathrm{K_q}]$, we obtain a \textbf{system of N decoupled equations} of the second-order:
+\[
+[\mathrm{M_q}] \ \ddot{\underline{\mathrm{q}}} + [\mathrm{K_q}] \ \underline{\mathrm{q}} = [\mathrm{S}]^T \underline{\mathrm{f}}
+\]
+
+Due to the orthogonality of the transformation matrix \( [\mathrm{S}] \), both \( [\mathrm{M_q}] \) and \( [\mathrm{K_q}] \) are \textbf{diagonal}:
+\[
+[\mathrm{M_q}] = 
+\begin{bmatrix}
+m_1 & 0 & \cdots & 0 \\
+0 & m_2 & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & m_N
+\end{bmatrix},
+\quad
+[\mathrm{K_q}] = 
+\begin{bmatrix}
+k_1 & 0 & \cdots & 0 \\
+0 & k_2 & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & k_N
+\end{bmatrix}
+\]
+
+Each decoupled equation can be associated to an \textbf{oscillator} vibrating at its own \textbf{natural frequency} $\omega_i$ (mode).
+The diagonal entries \( m_i \) and \( k_i \) represent the \textbf{modal mass and stiffness} associated with each mode (oscillator).
+
+\subsubsection{Normal Modes in PDEs}
+A \textbf{distributed-parameter system} is generally described by a PDE in time and space.
+Let us consider the case of an ideal string with fixed ends.
+The displacement \( y(x,t) \) of a vibrating string is governed by the wave equation:
+\[
+\mu \frac{\partial^2 y}{\partial t^2}(x,t) - T \frac{\partial^2 y}{\partial x^2}(x,t) = f_{\text{ext}}(x,t)
+\]
+
+To study the normal modes, we look for \textbf{standing wave solutions}:
+\[
+y(x,t) = s(x) \cdot q(t)
+\]
+
+The term \( s(x) \) describes the \textit{fixed spatial shape}, while \( q(t) \) represents its \textit{time-varying amplitude}.
+The D’Alembert equation with fixed ends admits infinite solutions like this, each one corresponding to a distinct vibration mode \( n \):
+\[
+y_n(x,t) = s_n(x) \cdot q_n(t)
+\]
+
+Substituting the factorized form into the wave equation leads to a separation of spatial and temporal dynamics for each mode:
+\[
+\mu \frac{\partial^2 y}{\partial t^2}(x,t) - T \frac{\partial^2 y}{\partial x^2}(x,t) = f_{\text{ext}}(x,t)
+\quad \Rightarrow \quad
+\mu s_n(x) \ddot{q}_n(t) - T s''_n(x) q_n(t) = f_{\text{ext}}(x,t)
+\]
+
+We then multiply both sides by \( s_n(x) \) and integrate over \( x \in [0,L] \), obtaining:
+\[
+\left[ \mu \int_0^L s_n^2(x) \ dx \right] \ddot{q}_n(t) 
+- \left[ T \int_0^L s_n''(x) s_n(x) \ dx \right] q_n(t) 
+= \int_0^L s_n(x) f_{\text{ext}}(x,t) \ dx
+\]
+
+Using integration by parts and assuming fixed (or free) boundaries, we get:
+\[
+\left[ \mu \int_0^L s_n^2(x) \ dx \right] \ddot{q}_n(t) 
+- T \left[ \underbrace{\cancel{ \left. s_n'(x) s_n(x) \right|_{0}^{L}}}_{\text{boundary conditions}} - \int_0^L \left( s_n'(x) \right)^2 dx \right] q_n(t)
+= \underbrace{\int_0^L s_n(x) f_{\text{ext}}(x,t) \ dx}_{F_\text{ext}}
+\]
+
+This is the equation of a second-order oscillator with modal mass $m_n$ and modal stiffness $k_n$:
+\[
+m_n = \mu \int_0^L s_n^2(x) \ dx, \qquad 
+k_n = T \int_0^L \left( s_n'(x) \right)^2 dx
+\]
+
+The equation for the \( n \)\textsuperscript{th} mode is that of a \textbf{second-order oscillator}:
+\[
+m_n \ddot{q}_n(t) + k_n q_n(t) = F_{\text{ext}}(t)
+\]
+For an ideal string with \textit{fixed ends} we have the following \textbf{modal shapes} $s_n(x)$:
+\[
+s_n(x) = \sin\left( \frac{n\pi x}{L} \right) \quad \Rightarrow \quad
+m_n = \frac{\mu L}{2}, \qquad 
+k_n = \frac{T L}{2}
+\]
+
+The shape function \( s_n(x) \) also determines \textit{how an external force acts on the mode}
+For instance, if a force is applied at a single point \( x_{\text{in}} \), we can model the \textit{external force density} $f_\text{ext}$ and the \textit{modal force} $F_\text{ext}(t)$ as:
+\[
+f_{\text{ext}}(x,t) = \delta(x - x_{\text{in}}) u(t)
+\quad \Rightarrow \quad
+F_{\text{ext}}(t)= \int_0^L s_n(x)  \delta(x - x_{\text{in}}) u(t) \ dx = \int_0^L s_n(x) \delta(x - x_{\text{in}}) \ dx \cdot u(t)= s_n(x_{\text{in}}) u(t)
+\]
+This shows that if \( x_{\text{in}} \) is a \textbf{node of the mode} (i.e. \( s_n(x_{\text{in}}) = 0 \)), then \textbf{no force is transmitted} to that node.
+
+The \textbf{oscillation of the system} at a given spatial point \( x_{\text{out}} \) is obtained by summing all the modal oscillations weighted by their corresponding shape functions:
+\[
+y(x_{\text{out}}, t) = \sum_{n=1}^{+\infty} s_n(x_{\text{out}}) \ q_n(t)
+\]
+If the \( n \)\textsuperscript{th} mode has a node at \( x_{\text{out}} \) (i.e.\ \( s_n(x_{\text{out}}) = 0 \)), then that mode does not contribute to the total displacement at that point $y(x_\text{out},t)$.
+This type of modal analysis can be extended to more complex cases, including systems with \textit{dispersion} and \textit{dissipation}.
+
+\begin{tcolorbox}[colback=black!5!white, colframe=black, title=\textbf{Modal analysis - PDE vs ODE}]
+The \textbf{modal approach} applies to both lumped and distributed, but with key differences:
+
+\begin{itemize}
+    \item In \textbf{ODEs (lumped systems)}, the dynamics are described by matrixes: mass $[\mathrm{M}]$ and stiffness $[\mathrm{K}]$. Normal modes are obtained as eigenvectors of the matrix equation $[\mathrm{K}] \underline{\mathrm{s}} = \omega^2 [\mathrm{M}] \underline{\mathrm{s}}$, resulting in a finite number of uncoupled second-order oscillators.
+
+    \item In \textbf{PDEs (distributed systems)}, the dynamics are described by differential operators (i.e. $\frac{\partial^2}{\partial x^2}$). Normal modes are functions $s_n(x)$ solving a boundary value problem. Each mode leads to a second-order oscillator in time via projection and integration, with modal mass and stiffness defined through integrals.
+\end{itemize}
+
+In both cases, each mode evolves as an independent second-order oscillator:
+\[
+\ddot{q}_n(t) + \omega_n^2 q_n(t) = \text{(forcing term)}
+\]
+
+But the nature of the modal basis differs: \textbf{finite-dimensional vectors} in the ODE case and \textbf{infinite-dimensional functions} in the PDE case.
+\end{tcolorbox}
+
+\subsubsection{Discrete-time Mechanical Oscillator}
+We have seen that each mode, whether it comes from a discrete system or a continuous one, behaves like a \textbf{second-order oscillator}, whose behaviour is given by:
+\[
+\ddot{q}(t) + 2\alpha \dot{q}(t) + \omega_0^2 q(t) = \frac{1}{m} f_{\text{mode}}(t), \qquad \omega_0 = \sqrt{\frac{k}{m}}: \text{natural frequency [rad/s]}, \quad \alpha = \frac{r}{m}: \text{damping factor [s$^{-1}$]}
+\]
+
+These parameters \(\omega_0, \alpha\) depend on the geometry and the material properties of the system.
+In the \textbf{Laplace domain}, this system becomes a \textbf{transfer function} $H(s)$:
+\[
+Q(s) = H(s) F_{\text{mode}}(s), \qquad H(s) = \frac{1/m}{s^2 + 2\alpha s + \omega_0^2}
+\]
+The force \( F_{\text{mode}}(s)\) that is “felt” by a single mode depends on the modal shape and on the
+spatial force distribution, and is scaled by the modal mass m
+
+In order to construct a \textbf{modal synthesizer}, we first need to derive a discrete-time (DT) version of the second-order oscillator. This is done by discretizing the continuous ODE using various numerical methods (refer to \textit{Discretization of Lumped Models} section).
+
+\textbf{Impulse invariant method} (which has the issue of aliasing):
+\[
+H(z) = \frac{ \left[ T_s \left( \frac{e^{-\alpha T_s}}{m \omega_r} \right) \sin(\omega_r T_s) \right] z^{-1} }{ 1 - \left[ 2 e^{-\alpha T_s} \cos(\omega_r T_s) \right] z^{-1} + e^{-2 \alpha T_s} z^{-2} },
+\qquad \omega_r = \sqrt{\omega_0^2 - \alpha^2}
+\]
+
+\textbf{Backward Euler method:}
+\[
+H(z) = \frac{ \dfrac{1}{m(F_s^2 + 2\alpha F_s + \omega_0^2)} }{ 1 - \dfrac{2F_s(\alpha + F_s)}{F_s^2 + 2\alpha F_s + \omega_0^2} z^{-1} + \dfrac{F_s^2}{F_s^2 + 2\alpha F_s + \omega_0^2} z^{-2} }
+\]
+\textbf{Backward Euler with centered scheme:}
+\[
+H(z) = \frac{ \dfrac{T_s^2}{m} z^{-1} }{ 1 + \left[\omega_0^2 T_s^2 + 2\alpha T_s - 2\right] z^{-1} + \left[1 - 2\alpha T_s\right] z^{-2} }
+\]
+\textbf{Bilinear transform} (where everything is predictable and controllable):
+\[
+H(z) =  \frac{\left[ \dfrac{1}{m(4F_s^2 + 4\alpha F_s + \omega_0^2)} \right] \left( 1 + 2z^{-1} + z^{-2} \right)}{ 1 + \dfrac{2(\omega_0^2 - 4F_s^2)}{4F_s^2 + 4\alpha F_s + \omega_0^2} z^{-1} + \dfrac{4F_s^2 - 4\alpha F_s + \omega_0^2}{4F_s^2 + 4\alpha F_s + \omega_0^2} z^{-2} }
+\]
+
+Each of these transfer functions \( H(z) \) represents a \textbf{discrete-time resonator} that can be used to simulate the response of a single mode. The method choice will affect stability, accuracy and computational efficiency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{DT mechanical oscillators.png}
+    \caption{Mechanical oscillators magnitude response - 2nd order oscillators in continuous time (solid lines) and discrete time (dashed lines)}
+\end{figure}
+
+\begin{tcolorbox}[colback=black!5!white, colframe=black, title=\textbf{Modal Analysis}]
+
+To determine the modal parameters of a system, we have different options depending on its complexity.
+
+If we are dealing with a discrete-time system made of \( N \) point masses connected by linear forces, the modal parameters (frequencies, shapes, etc.) can be calculated directly using standard matrix methods.
+
+However, \textbf{most real systems are more complex} and don't fit this simple model. In some cases - especially symmetric systems with simple boundary conditions - the PDE that describes the system can still be solved analytically to find the modal parameters.
+
+In all other cases, we must rely on either accurate \textbf{numerical simulations} (such as wave-guide mesh methods) or on actual \textbf{physical measurements} performed on the system.
+
+\end{tcolorbox}
+\subsubsection{Simple 1D and 2D shapes (\textit{optional})}
+\subsubsection{Experimental Approach}
+When analytical methods cannot be used, modal parameters can still be estimated through experimental or numerical approaches.
+
+One option is to \textbf{extract modal data from a recorded audio signal}, by estimating the resonances (center frequency and quality factor) using techniques such as LPC (\textit{refer to DAAP module}), peak tracking or similar methods.
+
+Alternatively, we can \textbf{simulate the response} of an object using \textbf{numerical models}, such as FDM (finite difference methods) or FEM (finite element methods).
+These techniques rely on \textbf{spatial discretization}, which limits the number of modes that can be estimated. 
+modal data obtained this way
+tends to suffer from
+underestimation of modal
+frequencies. The error can be reduced by
+densifying the spatial sampling
+grid (costly). Pruning the number of modes
+can alleviate the problem
+
+In \textbf{modal synthesis}, the input signal \( x(n) \) is treated as a force and mapped by a \textit{projection matrix} \( \Phi \) (eigenvectors) onto a bank of resonators \( R_i(z) \) (\textit{oscillators}), each representing a \textit{mode} of the system.
+The output \( y(n) \) corresponds to the \textit{superposition of all modal responses} and can be interpreted as a velocity caused by the input force that is observed at one point:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{Modal synthesis.png}
+    \caption{Modal synthesis block diagram}
+\end{figure}
+
+Each resonator is defined by its resonance frequency, bandwidth and gain.
+
+\subsubsection{Filter-based Modal Methods (\textit{optional})}
+
+The extraction approach that uses a \textbf{recorded audio signal} to model the system is based upon the principle that the system can be described by a transfer function and an input signal (\textbf{source-filter model}).
+Different approaches exist:
+
+\begin{itemize}
+    \item \textbf{Linear prediction} (Sandler): common in speech and audio coding, models the signal as the output of an all-pole filter excited by a noise-like input (\textit{refer to DAAP module}). The filter coefficients are derived to minimize the prediction error (power spectrum envelope estimation);
+    \item \textbf{Balanced model truncation} (Mackenzie): digital filter method for drum sounds, rreduces a high-order system (many modes) to a lower-order model that still captures dominant modes. It is suited for extracting a manageable filter that still accurately reproduces key resonances in percussive sounds;
+    \item \textbf{Parametric methods on frequency bands} (Laroche and Macon): we isolate specific frequency bands and fit parametric models (like AR or ARMA) to them. It helps to resolve modes that are close together (common in various musical instruments);
+    \item \textbf{Frequency-Zooming ARMA}: a variation of ARMA where you “zoom in” (resample or shift) around specific frequency bands to improve resolution. It is effective for high-resolution analysis of closely spaced modes.
+\end{itemize}
+
+This approach is generally suitable for percussive sounds (short and rich transients, very closed resonances, lack of steady pitch), being very accurate and flexible in frequency (fine-tuning of resonances region).
+It has physically less meaning with respect to analytical or full-modes model, because they lack information on the spatial distribution of the modes.
+
+\subsubsection{Physical-inspired Sonic Modelling (PhISM, \textit{optional})}
+It is an extension of the traditional modal synthesis to handle more complex and noisy excitations - like in percussive sounds generation - while in traditional modal synthesis we have impulsive excitations.
+
+The approach is \textbf{physical-inspired}: it does not simulate the physics of an instrument, but it mimics the outcome of those physics.
+The goal is \textbf{sonic modelling}: the focus is on capturing and reproducing the sound behaviour, not the exact physics.
+
+This approach performs \textbf{parametric spectral analysis} (i.e. AR modelling, Prony's method) on a percussive sound, decomposing it into \textit{resonator bank} (i.e. filter bank of the modes) and \textit{residual signal} (i.e. excitation).
+From the analysis of different excitations, we can parametrise \textit{different strike configurations} (i.e. position, type of exciting tool and amount of force), which we can map into \textit{real-time controls} - as in synthesizer interfaces.
+
+Once we define the resonator bank, we can obtain the input signal as \textbf{inverse filtering}: we remove the system resonances from the sound, obtaining a noise-like excitation.
+This residual is simplified to make it usable for real-time synthesis.
+
+\subsubsection{Functional Transformation Method (\textit{optional})}
+This approach solves PDEs turning them into \textbf{algebraic equations}, possible using integral transforms in both time (Laplace transform) and space (Sturm-Liovelle transform) - which makes it easier to implement digital filters for multidimensional transfer functions.
+In case of linear systems, we obtain a parallel bank of second-order resonators (each one associated to a natural mode).
+
+This method can be used to build accurate strings and membranes models without physical measurements.
+The advantages of such a method are:
+
+\begin{itemize}
+    \item \textbf{Unnecessary spatial discretization}: unlike FD schemes, we stay in continuous domain when applying the transformation - which leads to more efficient and accurate models;
+    \item \textbf{No systematic error in mode frequencies}: grid-based methods usually introduce numerical errors, so we avoid it and preserve the exact modal frequencies;
+    \item \textbf{Signal phase is correct with respect to both input and output locations}: this is critical for spatial and stereo realism in synthesizers.
+\end{itemize}
+
+\subsection{From FD to Modal Implementation (\textit{optional})}
+% I'll do that in my free time, which I'll never have - G.D.L.
+
+\clearpage
+
+\subsection{Digital WaveGuide}
+
+\subsubsection{Ideal String Waveguide Structure}
+
+We remind how to derive the \textbf{wave equation} for an \textbf{ideal string}: we analyse the total \textit{upward force} acting on an \textit{infinitesimal segment} of string of length \( dx \), under \textit{tension} \( T \).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{WG ideal string.png}
+    \caption{Ideal string affected by a total upward force $f$ due to tension $T$}
+\end{figure}
+
+In infinitesimal dimension, we may assume \textit{small angles} \( \theta_1 \) and \( \theta_2 \), so that we can approximate:
+\[
+f = T \sin(\theta_1) + T \sin(\theta_2) \approx T[\tan(\theta_1) + \tan(\theta_2)]
+\]
+
+We prefer to have $\tan(\theta)$ because is related to the displacement derivative:
+\[
+\tan(\theta) \approx \frac{\partial y}{\partial x} \quad \Rightarrow \quad f = T \left[ -\frac{\partial y}{\partial x}(x,t) + \frac{\partial y}{\partial x}(x + dx, t) \right]
+\]
+\[
+\frac{\partial y}{\partial x}(x + dx, t) \approx \frac{\partial y}{\partial x}(x, t) + \frac{\partial^2 y}{\partial x^2}(x, t) \ dx \quad \Rightarrow \quad 
+f \approx T \left[ \cancel{-\frac{\partial y}{\partial x}(x,t) + \frac{\partial y}{\partial x}(x,t)} + \frac{\partial^2 y}{\partial x^2}(x,t) dx \right]
+= T \frac{\partial^2 y}{\partial x^2}(x,t) dx
+\]
+
+We express the string segment mass $m$ in terms of \textit{linear mass density} $\mu$ and apply the \textit{Newton's second law}:
+\[
+\begin{cases}
+    m = \mu \ dx \\
+    f = ma
+\end{cases} \quad \Rightarrow \quad 
+T \frac{\partial^2 y}{\partial x^2}(x) dx = \mu \ dx \frac{\partial^2 y}{\partial t^2}(x,t)
+\quad \Rightarrow \quad
+T \frac{\partial^2 y}{\partial x^2}(x) = \mu \frac{\partial^2 y}{\partial t^2}(x,t)
+\]
+
+This is the \textbf{classical wave equation} for a \textbf{vibrating string}.
+We have seen that the general solution to the 1D wave equation is given by the sum of two \textbf{travelling waves}:
+\[
+y(x, t) = \underbrace{y_r(ct - x)}_{\text{progressive}} + \underbrace{y_l(ct + x)}_{\text{regressive}}
+\]
+
+\begin{proof}
+
+\begin{align*}
+    y(x,t) = y_r(ct - x)
+\quad &\Rightarrow \quad
+\frac{\partial y_r}{\partial x}(ct - x) = -\frac{1}{c} \frac{\partial y_r}{\partial t}(ct - x) 
+\quad &\Rightarrow \quad
+\frac{\partial^2 y_r}{\partial x^2}(ct - x) = \frac{1}{c^2} \frac{\partial^2 y_r}{\partial t^2}(ct - x)\\
+y(x,t) = y_l(ct + x)
+\quad &\Rightarrow \quad
+\frac{\partial y_l}{\partial x}(ct + x) = \frac{1}{c} \frac{\partial y_l}{\partial t}(ct + x)
+\quad &\Rightarrow \quad
+\frac{\partial^2 y_l}{\partial x^2}(ct + x) = \frac{1}{c^2} \frac{\partial^2 y_l}{\partial t^2}(ct + x)
+\end{align*}
+
+\end{proof}
+
+\clearpage
+
+Let us consider an infinitely long string plucked simultaneously at three points ‘p’.
+The \textbf{initial displacement} is modelled as the sum of two identical triangular pulses travelling in opposite directions:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.57\linewidth]{WG travelling waves.png}
+    \caption{Travelling waves in the infinitely long ideal string - three plucking points 'p' }
+\end{figure}
+
+At time \( t_0 \), the centers of the travelling waves are separated by a distance of \( 2ct_0 \).
+Wherever these waves overlap with the same slope, their contributions cancel out in velocity, so the string appears locally motionless despite being deformed.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.25\linewidth]{plucking 1.png}
+    \includegraphics[width=0.25\linewidth]{plucking 2.png}
+    \includegraphics[width=0.25\linewidth]{plucking 3.png}
+    \caption{Time analysis (half cycle) of a string plucked in the middle point - superposition of two travelling waves}
+\end{figure}
+
+This behaviour illustrates the \textbf{linear superposition principle} in wave propagation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{plucked string 1-5.png}
+    \includegraphics[width=0.35\linewidth]{plucked string 1-5 spectrum.png}
+    \caption{Motion of a string plucked at $x=L/5$ - time evolution (left) and harmonics distribution in the spectrum (right)}
+\end{figure}
+
+Instead of discretizing the wave equation directly, as in finite difference methods (for both time and space), we take a different approach: we \textbf{sample the general solution} of the wave equation - the superposition of two travelling waves.
+This approach greatly simplifies the model: since the wave motion is already captured in the analytic form of the solution, we only need to sample \textit{one variable} - typically time.
+The \textit{spatial behaviour} of the system is \textit{implicitly handled} by how these travelling waves evolve over time.
+
+When sampling in time, we define the \textbf{sampling period} $T_s$ (or temporal sampling interval) and the \textbf{sampling rate} $F_s$.
+The \textbf{spatial sampling interval} $X_s$ is:
+\[
+X_s = c T_s, \qquad T_s=\frac{1}{F_s}
+\]
+
+For a vibrating string of length \( L \) and fundamental frequency \( f_0 \):
+\[
+c = \underbrace{2L}_{\lambda} \ f_0
+\quad \Rightarrow \quad
+X_s = c T_s = 2L f_0 \cdot \frac{1}{F_s} = 2L \frac{f_0}{F_s}
+\]
+
+The number of \textbf{spatial samples} along the string is:
+\[
+\frac{L}{X_s} = \frac{F_s}{2f_0}
+\]
+
+The number of spatial samples equals the number of string harmonics we are able to appreciate.
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Practical Examples: String vs. Air}]
+CD-quality model ($F_s = 44100$ Hz) of a Les Paul guitar:
+
+\begin{itemize}
+    \item Strings length: $L \approx 660$ mm
+% \end{itemize}
+% \textbf{Guitar string (Les Paul, \( L \approx 660\text{mm} \))} – CD-quality (half rate): 
+% \begin{itemize}[left=1.5em]
+    \item Low E string ($f_0=82.4$ Hz): $X_s = \frac{L \cdot f_0}{F_s/2} \approx 2.5 $ mm $ \longrightarrow \frac{F_s/2}{f_0} \approx 268 $ harmonics
+    \item High E string (2 octaves higher): $ X_s \approx 10 $ mm $\longrightarrow \frac{F_s/2}{f_0} \approx 67 $ harmonics
+    \item Number of oscillators (for additive synthesis) or two-pole filters (for subtractive, modal, source filter decomposition synthesis) equal to the number of harmonics
+    \item Digital waveguides: we only need a $2L$ delay line
+\end{itemize}
+
+
+Sound propagation in air:
+\begin{itemize}
+    \item Speed: \( c \approx 331\text{m/s},\quad X_s = \frac{c}{F_s} \approx 7.5\text{mm} \)
+    \item Spatial sampling rate: \( 1/X_s \approx 133\) samples/m
+    \item Sound speed in air $\approx$ sound speed of transverse waves on some strings
+    \item Sound speed travles much faster in solids than in air.
+    \item longitudinal waves in strings travel faster than transverse wave.
+\end{itemize}
+\end{tcolorbox}
+
+We sample both time and space and evaluate the wave equation solution only at the \textbf{discretization points}:
+\[
+\begin{cases}
+x \to x_m = m X_s \\
+t \to t_n = n T_s
+\end{cases}
+\quad \Rightarrow \quad
+y(x_m, t_n) = y_r(c n T_s - m X_s) + y_l(c n T_s + m X_s) = y^+(n - m) + y^-(n + m)
+\]
+
+The first term $y^+(n-m)$ represents the output of a $m$-samples delay line with input $y^+(n)$.
+The second term $y^-(n+m)$ is the input of a m-samples delay line with output $y^-(n)$.
+
+% This represents the \textit{output of two delay lines of \( m \) samples}, one for the right-going wave \( y^+ \), one for the left-going wave \( y^- \), where the total displacement \( y(n) \) at a point is given by their sum.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{WG structure ideal string.png}
+    \caption{Basic Waveguide structure of the ideal string - progressive and regressive wave delay lines}
+\end{figure}
+
+The two delay lines represent the progressive and regressive waves of the wave equation solution.
+Each node of the waveguide represents a \textbf{space node} and is computed as the \textbf{sum of the two delay lines}. (The dispalcement at position ms and time nTs can be written as sum of two travelling waves: \(8(nT_s, mX_s) = y^+(n - m) + y^-(n + m)\))
+This means we can model a full resonator using just two delay lines. Instead of explicitaly simulating all postions \(x_m\) in space (like in FDs scheme), in DWG we just simulate two delay lines; the string position \(x_m\) is implicit: each delay element \(z^-1\) correspond to propagation by one spatial sampling step \(X_s = cT_s\)
+
+An important property of discrete-time simulations based on exact solutions (such as digital waveguides) is that \textbf{they match the continuous-time behaviour exactly at the sampling instants}.
+In other words, even though we are not simulating the system continuously, the computed values at each sample time \( t = nT_s \) are \textit{identical} to those of the original continuous system.
+
+To \textbf{avoid aliasing} artifacts that may arise during sampling, it is essential to ensure that \textbf{all initial waveforms are band-limited} into the frequency range ($-F_s/2,F_s/2$): this condition applies also to any external driving signals.
+Non-linearities should either be avoided or kept weak.
+In more complex time varying case or non-linear scenarios, it becomes crucial to \textbf{apply strong low-pass filters} with rapid high frequency roll-off to suppress out-of-band components.
+Finally, whenever possible, \textbf{it is preferable to employ feed-forward structures rather than feedback ones}, to further reduce aliasing and improve numerical robustness.
+
+We can express the wave also in terms of its spatial derivative (\textbf{slope}):
+\[
+y'(x, t) = \frac{\partial}{\partial x} y(x, t) = y_r'(ct - x) + y_l'(ct + x) = -\frac{1}{c} \underbrace{\dot{y}^+(n - m)}_{v^+} + \frac{1}{c} \underbrace{\dot{y}^-(n + m)}_{v^-}
+\]
+\begin{proof}
+    We know that:
+\begin{align*}
+    \frac{\partial y_R}{\partial x} & = \frac{d y_R(ct-x)}{d(ct-x)} \cdot \frac{\partial(ct-x)}{\partial x} 
+    \quad \Rightarrow \quad
+    \frac{\partial y_R}{\partial x} = - y_R'(ct-x)\\
+    \frac{\partial y_R}{\partial t} & = \frac{d y_R(ct-x)}{d(ct-x)} \cdot \frac{\partial(ct-x)}{\partial t} 
+    \quad \Rightarrow \quad
+    \frac{\partial y_R}{\partial t} = c\cdot y_R'(ct-x)
+\end{align*}
+    Thus we obtain the relationship
+    \[
+    \frac{\partial y_R}{\partial x} = - \frac{1}{c} \frac{\partial y_R}{\partial t} = -\frac{1}{c} \dot{y}^+(n - m)
+    \]
+    In a similar way as done above, we observe: 
+    \begin{align*}
+        \frac{\partial y_l}{\partial x} & = \frac{d y_l(ct+x)}{d(ct+x)} \cdot \frac{\partial(ct+x)}{\partial x} 
+    \quad \Rightarrow \quad
+    \frac{\partial y_l}{\partial x} =  y_l'(ct+x)\\
+    \frac{\partial y_l}{\partial t} & = \frac{d y_l(ct+x)}{d(ct+x)} \cdot \frac{\partial(ct+x)}{\partial t} 
+    \quad \Rightarrow \quad
+    \frac{\partial y_l}{\partial t} = c\cdot y_l'(ct+x)
+    \end{align*}
+    Thus we obtain the relationship
+    \[
+    \frac{\partial y_l}{\partial x} =  \frac{1}{c} \frac{\partial y_l}{\partial t} =\frac{1}{c}\dot{y}^+(n - m)
+    \]
+\end{proof}
+
+This gives the relation between slope and waves velocity:
+\[
+y'^{+} = -\frac{1}{c} v^+, \quad y'^{-} = \frac{1}{c} v^- \quad \Longleftrightarrow \quad v^+ = -c \ y'^{+}, \quad v^- = c \ y'^{-}
+\]
+
+We define physical units of force for $f = f^+ + f^-$:
+\[
+\begin{cases}
+f^+ = -T y'^{+} \\
+f^- = -T y'^{-}
+\end{cases}
+\quad \Rightarrow \quad
+\begin{cases}
+f^+ = \frac{T}{c} v^{+} \\
+f^- = -\frac{T}{c} v^{-}
+\end{cases}
+\]
+
+We define the \textbf{characteristic string impedance} $Z_0$:
+\[
+c = \sqrt{\frac{T}{\mu}} \quad \Rightarrow \quad \frac{T}{c} = \sqrt{T \mu} = Z_0 \quad \text{[N$\cdot$s/m]}
+\]
+
+We are now able to define \textbf{Ohm's law for travelling waves}:
+\[
+f^+ = \frac{T}{c} v^{+} = Z_0 v^{+},
+\qquad
+f^- = -\frac{T}{c} v^{-} = - Z_0 v^{-}
+\]
+
+The switch between \textbf{Kirchhoff variables} ($f,v$) and \textbf{wave variables} ($f^+,f^-$) is possible by means of invertible \textbf{transformations}:
+\[
+\begin{pmatrix}
+f \\
+v
+\end{pmatrix} =
+\begin{bmatrix}
+1 & 1 \\
+1/Z_0 & -1/Z_0
+\end{bmatrix}
+\begin{pmatrix}
+f^+ \\
+f^-
+\end{pmatrix}
+, \qquad
+\begin{pmatrix}
+f^+ \\
+f^-
+\end{pmatrix} = \frac{1}{2}
+\begin{bmatrix}
+1 & Z_0 \\
+1 & -Z_0
+\end{bmatrix}
+\begin{pmatrix}
+f \\
+v
+\end{pmatrix}
+\]
+
+To summarize, \textbf{Digital Waveguide (DWG) models discretize the general solution of the PDE - not the PDE itself}, as in finite difference (FD) methods.  
+This approach is less general than FD methods, but it is much more efficient and accurate at the sampling instants.
+
+\subsubsection{Acoustic Tubes Waveguide Structure}
+
+The case of \textbf{acoustic tubes} is similar to other wave propagation models.
+The variables are pressure $p$ and flow $u$ (volume velocity), in relation between each other and with the characteristic impedance $Z_0$:
+\[
+p^+(ct - x) = Z_0 \cdot u^+(ct - x), \quad p^-(ct + x) = -Z_0 \cdot u^-(ct + x), \qquad Z_0 = \frac{\rho_\text{air} c}{S}
+\]
+
+For \textbf{conical geometries}, the relationships are slightly modified (distance from the apex $r$):
+\[
+P^+(r, s) = Z_0(s) \cdot U^+(r, s), \quad P^-(r, s) = -Z_0(s) \cdot U^-(r, s), \qquad Z_0(s) = \frac{\rho_\text{air} c}{S} \cdot \frac{rs}{rs + c}
+\]
+
+Let us consider an ideal, lossless \textbf{cylindrical bore}: we want to discretize the pressure \( p(x, t) \) in both time and space.
+Assuming \( X_s = c T_s \) and \( L = m X_s \), we define the discrete variables as \( x \rightarrow m X_s \) and \( t \rightarrow n T_s \), obtaining the discrete expression of the pressure:
+\[
+p(m X_s, n T_s) = p_r(n c T_s - m X_s) + p_l(n c T_s + m X_s)
+\quad \Rightarrow \quad
+p(m, n) = p^+(n - m) + p^-(n + m)
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{WG acoustic tubes.png}
+    \caption{Cylindrical bore (left) and  Waveguide structure (right)}
+\end{figure}
+In real scenarios, we usually find variable cross-section profiles, which can be better approximated using \textbf{conical bores}:
+
+% \textbf{Conical bores} offer a better approximation of acoustic tubes with smoothly varying cross-section, such as the vocal tract.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{Vocal truct acoustic tube.png}
+    \caption{Vocal tract structure}
+\end{figure}
+
+The general \textbf{3D D’Alembert wave equation} of the acoustic pressure \( p \) is:
+\[
+\ddot{p} = c^2 \ \nabla^2 p, \qquad \nabla = \frac{\partial}{\partial x_1} + \frac{\partial}{\partial x_2} + \frac{\partial}{\partial x_3}
+\]
+
+For \textit{cylindrical bores}, using cylindrical coordinates, 1D longitudinal pressure waves in the \( z \)-direction reduce to:
+\[
+\ddot{p} = c^2 p''
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{cyl sphere coordinates.png}
+    \caption{Cylindrical (left) and spherical coordinates (right)}
+\end{figure}
+
+For \textit{conical bores}, adopting spherical coordinates, the wave equation is in function of the acoustic pressure in radial coordinates $P(r,t)$:
+\[
+\frac{1}{r^2} \frac{\partial}{\partial r} \left( r^2 \frac{\partial P}{\partial r} \right) = \frac{1}{c^2} \frac{\partial^2 P}{\partial t^2}, \qquad P = \frac{p}{r} \quad \Rightarrow \quad 
+\ddot{p} = c^2 p''
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{conical bore.png}
+    \caption{Conical bore (left) and Waveguide structure (right)}
+\end{figure}
+
+In the previous analysis, we assumed for simplicity that the length $L$ is an integer multiple of the spatial sampling interval $X_s$ (i.e. $L = m X_s$). However, this \textbf{quantization} of allowed lengths is too coarse for our purposes.
+Let us consider sampling rate $F_s = 44.1$ kHz and wave velocity $c = 347$ m/s, the resulting spatial step is:
+\[
+X_s = \frac{c}{F_s} = 7.8 \ \text{mm}
+\]
+Length differences of this magnitude can produce \textbf{perceivable pitch variations} in wind instruments.
+To address this, we need a \textit{fractional-delay filter} to fine-tune the length of a waveguide section (\textbf{tuning problem}).
+
+Regarding the \textbf{boundary conditions}, fixed and free-end conditions can be turned into reflection conditions for velocity and force waves.
+For example in an ideal string with fixed end condition, so zero velocity at the boundary, corresponds to reflection conditions like
+$v^+ =  -v^-$ and $f^+ = f^-$.
+    
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{boundariesss.png}
+    \caption{Reflection conditions in an ideal string}
+\end{figure}
+
+Fixed and free-end conditions can be turned into reflection conditions also for flow and pressure waves
+
+For a \textbf{closed end} at $x = 0$ in a cylindrical bore, the flow velocity is zero due to reflection:
+\[ u = u^+ + u^- = \frac{p^+ - p^-}{Z_0} = 0 \quad \Rightarrow \quad u^+ = -u^-, \qquad p^+ = p^- \]
+
+At the \textbf{open end} at $x = L$, the pressure is zero:
+\[ p = p^+ + p^- = 0 \quad \Rightarrow \quad p^- = -p^+, \qquad u^+ = u^- \]
+
+Travelling waves in waveguides are \textbf{exponentially damped} along the propagation direction (\textbf{dissipation}), modelled by introducing the damping term $d_1$ into the wave equation:
+\[ \mu \frac{\partial^2 p}{\partial t^2} = T \frac{\partial^2 p}{\partial x^2} - d_1 \frac{\partial p}{\partial t} \]
+
+The parameter $d_1$ accounts for \textbf{frequency-independent dissipation} and can be implemented as a \textbf{low-pass loss filter} $g$ into the pressure expression:
+\[ p(x, t) = e^{-\frac{d_1 x}{2c}} p_r(ct - x) + e^{\frac{d_1 x}{2c}} p_l(ct + x) 
+\quad \Rightarrow \quad 
+p(m, n) = g^m p^+(n - m) + g^{-m} p^-(n + m), \quad g = e^{-\frac{d_1 T_s}{2}} < 1 \]
+
+For \textbf{frequency-dependent losses}, an additional term $d_2$ modifies the equation as:
+\[ \mu \frac{\partial^2 p}{\partial t^2} = T \frac{\partial^2 p}{\partial x^2} - d_1 \frac{\partial p}{\partial t} + d_2 \frac{\partial^3 p}{\partial t \partial x^2} \]
+Also in this case \(d_2\) can be implemented as a low pass loss filter which can be designed to match a real-string.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{dissipation.png}
+    \caption{Waveguide structure for a realistic string that includes dissipation}
+\end{figure}
+
+Loss in conceptually distributed along the string. In a DWG, becasue delay and LTI filters commute, you can in theory “lump” that distributed loop into one (or two) filters placed in the loop (often at the reflections).
+\subsubsection{Loss and Dispersion Filter Design(\textit{optional})}
+\subsubsection{Junctions and Networks}
+So far, we considered waveguide modelling in a uniform medium.
+However, \textbf{medium discontinuities} may occur, which make the \textbf{impedance change} and the signal scatter.
+Common examples of non-uniform media include \textit{piecewise} cylindrical or conical \textit{bores} of varying cross-section and \textit{strings with discontinuous linear mass}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{zdafdfsdf.png}
+    \includegraphics[width=0.25\linewidth]{Vocal truct acoustic tube.png}
+    \caption{Examples of non-uniform media - piecewise varying cross-section (left) and vocal tract (right)}
+\end{figure}
+
+To connect two WG sections, we need to define the behaviour at \textbf{junctions}.
+
+\subsubsection{The Kelly-Lochbaum Junction}
+Let us consider the discontinuity between \textit{two adjacent cylindrical sections} with cross-section areas $A_1$ and $A_2$ and admittances $\Gamma_1$ and $\Gamma_2$:
+\[ \Gamma_1 = \frac{1}{Z_1} = \frac{A_1}{\rho_\text{air} c}, \qquad \Gamma_2 = \frac{1}{Z_2} = \frac{A_2}{\rho_\text{air} c} \]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{Kellyine.png}
+    \includegraphics[width=0.4\linewidth]{sdgdfne.png}
+    \caption{Impedance discontinuity (left) and junction block schematic (right)}
+\end{figure}
+
+At the junction, we impose \textbf{continuity conditions} based on Kirchhoff's laws:
+\[ u_1 + u_2 = 0, \qquad p_1 = p_2 = p_J \]
+
+The impedance change at the discontinuity causes \textbf{wave scattering}: incident travelling waves are partially transmitted and partially reflected back.
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Analogy between Electrical and Acoustic Variables}]
+\begin{itemize}
+  \item \textbf{Voltage} \( V \quad \longleftrightarrow \quad \) \textbf{Pressure} \( p \)
+  \item \textbf{Current} \( I \quad \longleftrightarrow \quad \) \textbf{Volume velocity} \( u \)
+  \item \textbf{Resistance} \( R \quad \longleftrightarrow \quad \) \textbf{Acoustic Impedance} \( Z = \frac{\rho c}{A} \)
+  \item \textbf{Kirchhoff's Law (node)}: \( \sum I_k = 0 \quad \longleftrightarrow \quad \sum u_k = 0 \)
+  \item \textbf{Kirchhoff's Law (loop)}: \( \sum V_k = 0 \quad \longleftrightarrow \quad p_1 = p_2 = p_J \)
+\end{itemize}
+\end{tcolorbox}
+
+We want to find the \textbf{input-output relationships} that describe the junction that implements \textbf{scattering} in the WD domain:
+\[
+\begin{cases}
+p_1 = p_1^+ + p_1^- \\
+p_2 = p_2^+ + p_2^-
+\end{cases}, \qquad
+\begin{cases}
+u_1 = u_1^+ + u_1^- = \frac{1}{Z_1} \left( p_1^+ - p_1^- \right) = \Gamma_1 \left(p_1^+ - p_1^-\right) \\
+u_2 = u_2^+ + u_2^- = \frac{1}{Z_2} \left( p_2^+ - p_2^- \right) = \Gamma_2 \left(p_2^+ - p_2^-\right)
+\end{cases}
+\]
+
+% These conditions define the \textbf{scattering coefficients at the junction}, allowing us to model the propagation of waves through non-uniform sections effectively.
+
+% At a junction, the \textit{continuity of pressure and the conservation of volume velocity} provide the necessary scattering relations.
+% For instance, in the case of two connected sections with areas $A_1$ and $A_2$, we can write:
+
+% \[ p_1^+ + p_1^- = p_2^+ + p_2^- \qquad \text{and} \qquad \frac{p_1^+ - p_1^-}{Z_1} = \frac{p_2^+ - p_2^-}{Z_2} \]
+
+The first continuity condition, taken for the KCL becomes:
+\[
+\underbrace{\left(u_1^+ + u_1^- \right)}_{u_1} + \underbrace{\left(u_2^+ + u_2^- \right)}_{u_2} = 0 \quad \Rightarrow \quad \Gamma_1 (p_1^+ - p_1^-) + \Gamma_2 (p_2^+ - p_2^-) = 0
+\]
+Developing the terms scaling the $\Gamma_{1,2}$, we have: 
+\[
+\begin{cases}
+p_1^+ - p_1^- = 2p_1^+ - \underbrace{\left( p_1^+ + p_1^- \right)}_{=p_1=p_J} = 2p_1^+ - p_J \\
+p_2^+ - p_2^- = 2p_2^+ - \underbrace{\left( p_2^+ + p_2^- \right)}_{=p_2=p_J} = 2p_2^+ - p_J
+\end{cases} 
+\quad \Rightarrow \quad  \Gamma_1 (2p_1^+ - p_J) + \Gamma_2 (2p_2^+ - p_J) = 0
+\quad \Rightarrow \quad p_J = 2 \frac{\Gamma_1 p_1^+ + \Gamma_2 p_2^+}{\Gamma_1 + \Gamma_2}
+\]
+Using the resulting \textbf{junction pressure} $p_J$ and the Kirchhoff’s laws of pressure, the outgoing pressures $p^-$ become:
+\[ p_1^- = p_J - p_1^+ = -\frac{\Gamma_2 - \Gamma_1}{\Gamma_2 + \Gamma_1} p_1^+ + \frac{2\Gamma_2}{\Gamma_2 + \Gamma_1} p_2^+, \qquad
+p_2^- = p_J - p_2^+ =  \frac{\Gamma_2 - \Gamma_1}{\Gamma_2 + \Gamma_1} p_2^+ + \frac{2\Gamma_1}{\Gamma_2 + \Gamma_1} p_1^+  \]
+
+Describing the discontinuity behaviour in terms of \textbf{reflection coefficient} $\rho$, we obtain the following \textbf{scattering equations}:
+\[
+\rho = \frac{\Gamma_2 - \Gamma_1}{\Gamma_2 + \Gamma_1} \quad \Rightarrow \quad
+\begin{cases}
+p_1^- = -\rho \cdot p_1^+ + (1 + \rho) p_2^+ \\
+p_2^- = \rho \cdot p_2^+ +(1 - \rho) p_1^+ 
+\end{cases}
+\]
+
+We can implement the \textbf{Kelly-Lochbaum junction} in different ways and using different numbers of multipliers:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{dffsvdvsfe.png}
+    \includegraphics[width=0.4\linewidth]{1junction.png}
+    \caption{Kelly-Lochbaum junction implementations - 4 multipliers (left) and 1 multiplier (right)}
+\end{figure}
+
+\subsubsection{Termination Junction}
+
+Multitube lossless models are commonly used to describe the vocal tract, but the same formalism can be applied to mechanical or electrical structures. We can see the multitube model as several scattering junctions in series, with a final termination junction.
+A special case of junctions is represented by terminations, which define the boundary conditions at the end of a tube or waveguide.
+
+For instance, in an ideal cylindrical bore closed at one end, the boundary condition corresponds to an infinite impedance.  
+In this case, the reflection coefficient becomes
+\(
+\rho  = -1,
+\)
+which implies complete reflection with phase inversion of the incident wave.
+
+\begin{figure}[H]
+    \centering
+\includegraphics[width=0.75\linewidth]{terminationjunction.png}
+    \caption{Ideal cylindrical bore closed at one end (left) and waveguide structure for a Termination Junction (right)}
+\end{figure}
+
+
+
+When a string is excited at a point $P_p$, the initial condition imposed at the pluck point can be expressed in terms of different physical variables.  
+Each of them determines the shape of the two traveling waves that propagate in opposite directions along the string.
+
+\begin{itemize}
+  \item Displacement (a).
+  A triangular profile is generated at the pluck point, which splits into two symmetric waves. 
+  
+  \item Velocity (b). 
+  Being the time derivative of displacement, it results in step-like waves; the polarity differs on each side of $P_p$.
+  
+  \item Acceleration (c).
+  As the second time derivative, it produces impulsive waves traveling in both directions.
+  
+  \item Slope (d).
+  As the spatial derivative of displacement, the triangular shape becomes a pair of step functions. 
+  
+  \item Curvature (e).
+  As the second spatial derivative, the slope discontinuity leads to localized impulses.
+  
+\end{itemize}
+
+In all cases, the imposed condition at the pluck point is decomposed into two traveling waves, which carry the information symmetrically toward the string boundaries.
+
+\begin{figure}[H]
+    \centering
+\includegraphics[width=0.55\linewidth]{examples.png}
+    \caption{Plucked string excitation}
+\end{figure}
+
+
+\subsubsection{N-dimensional Parallel Junction}
+
+The results derived for two-port junctions can be generalized to the case of $N$ acoustic bores connected in parallel.  
+In this situation, the incoming and outgoing wave variables are expressed as $N$-dimensional vectors
+\[
+\underline{p}^- = [A] \, \underline{p}^+ ,
+\]
+where $\underline{p}^+$ contains the incident pressure waves and $\underline{p}^-$ the reflected waves.  
+The matrix $[A]$ is the \textbf{scattering matrix} that encodes how the energy is redistributed among the ports.
+
+
+The scattering relations must satisfy the physical continuity constraints given by the Kirchhoff-type laws:
+
+\begin{itemize}
+    \item Loop condition (pressure continuity):
+    \[
+    p_1 = p_2 = \ldots = p_N = p_J ,
+    \]
+    meaning that the pressure is the same at the junction.
+    \item Node condition (volume velocity conservation):
+    \[
+    u_1 + u_2 + \ldots + u_N = 0 ,
+    \]
+    where $u_i$ denotes the volume velocity at port $i$.
+\end{itemize}
+
+
+By enforcing these constraints, the scattering matrix $A$ takes the form
+\[
+A =
+\begin{bmatrix}
+\frac{2\Gamma_1}{\Gamma_J} - 1 & \frac{2\Gamma_2}{\Gamma_J} & \cdots & \frac{2\Gamma_N}{\Gamma_J} \\
+\frac{2\Gamma_1}{\Gamma_J} & \frac{2\Gamma_2}{\Gamma_J} - 1 & \cdots & \frac{2\Gamma_N}{\Gamma_J} \\
+\vdots & \vdots & \ddots & \vdots \\
+\frac{2\Gamma_1}{\Gamma_J} & \frac{2\Gamma_2}{\Gamma_J} & \cdots & \frac{2\Gamma_N}{\Gamma_J} - 1
+\end{bmatrix},
+\]
+where
+\[
+\Gamma_J = \sum_{l=1}^{N} \Gamma_l ,
+\]
+and $\Gamma_l$ denotes the acoustic admittance of the $l$-th port.
+
+For $N=2$, this reduces to the well-known \textbf{Kelly--Lochbaum junction}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.35\textwidth]{multiportjunction.png}
+\caption{Parallel multi-port junction with $N$ branches.}
+\end{figure}
+
+The matrix formulation of the scattering process can be implemented through an equivalent block structure, 
+which explicitly shows how incident and reflected waves are combined at the junction.  
+
+In this representation, each port is characterized by its acoustic admittance $Y_i$.  
+The incoming waves $p_i^+$ are weighted by their corresponding admittances and summed to compute the junction pressure $p_J$:
+\[
+p_J = \frac{\sum_{i=1}^N Y_i \, p_i^+ + U_{\text{ext}}}{\sum_{i=1}^N Y_i},
+\]
+where $U_{\text{ext}}$ denotes a possible external excitation applied at the node.  
+
+Once $p_J$ is determined, the reflected waves are obtained as
+\[
+p_i^- = p_J - p_i^+ ,
+\]
+which enforces both pressure continuity and conservation of volume velocity.
+\\
+The lower part shows the equivalent modular representation, where each admittance $Y_i$ is connected to the junction node $N_1$ through a waveguide branch. 
+Multiple nodes $N_1, N_2, \ldots$ can be concatenated to describe complex multitube or multiport systems.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.75\textwidth]{junctionstructure.png}
+\caption{Waveguide structure implementing an $N$-port junction}
+\label{fig:junction_structure}
+\end{figure}
+
+
+\subsubsection{Loaded Junction}
+
+A further extension of the Kelly--Lochbaum junction is the \textbf{loaded junction}, 
+in which an external signal is injected into the system. This configuration models, for example, the case of a hammered string: the string velocity must be continuous at both sides of the junction ($v_1 = v_2 = v_J$), and during the hammer contact the junction velocity $v_J$ coincides with that imposed by the hammer.
+
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.65\textwidth]{loadedjunction.png}
+\caption{Loaded junction between two waveguide strings with an external force $f_J[n]$.}
+\end{figure}
+
+
+
+At the junction, velocity continuity and force balance must hold:
+\[
+v_1 = v_2 = v_J, \qquad f_1 + f_2 + f_J = 0 .
+\]
+
+Each branch force is related to the wave variables by
+\[
+f_i = Z_0 \,(v_i^+ - v_i^-), \qquad v_i = v_i^+ + v_i^- .
+\]
+
+Substituting into the equilibrium condition gives
+\[
+Z_0(v_1^+ - v_1^-) + Z_0(v_2^+ - v_2^-) + f_J = 0 .
+\]
+
+Rearranging,
+\[
+f_J = -Z_0 \Big[(v_1^+ - v_1^-) + (v_2^+ - v_2^-)\Big].
+\]
+
+Using velocity continuity $v_1 = v_2 = v_J$ and $v_J = v_i = v_i^+ + v_i^- \rightarrow v_i^- = v_J - v_i^+$ , 
+the expression simplifies to
+\[
+f_J = -2Z_0 \big( v_1^+ + v_2^+ - v_J \big).
+\]
+
+Finally, solving for the junction velocity yields
+\[
+v_J = v_1^+ + v_2^+ - \frac{1}{2Z_0} f_J .
+\]
+
+
+Once $v_J$ is determined, the reflected velocities can be computed as
+\[
+v_1^-(n) = v_J(n) - v_1^+(n) 
+         = v_2^+(n) - \frac{1}{2Z_0} f_J(n),
+\]
+\[
+v_2^-(n) = v_J(n) - v_2^+(n) 
+         = v_1^+(n) - \frac{1}{2Z_0} f_J(n).
+\]
+
+
+\subsubsection{Non-cylindrical Junctions (\textit{optional})}
+\subsubsection{DWG of coupled strings (\textit{optional})}
+\subsubsection{DWG meshes and networks}
+
+
+The use of scattering junctions allows the construction of arbitrary interconnections 
+between delay lines and junction nodes, forming what is generally referred to as 
+\textbf{digital waveguide networks} (DWNs).  
+These structures are flexible and can represent complex propagation domains.
+
+A key property is that \textbf{stability can be guaranteed in a simple way}:  
+it is sufficient to ensure that \textbf{all elements are passive}, i.e., \textbf{the real part of each admittance 
+remains positive at all frequencies}. This condition guarantees that no energy is artificially 
+created in the network.
+
+An important special case is the \textbf{digital waveguide mesh} (DWM), which corresponds to a DWN 
+with a regular and repeated structure, often used to approximate multidimensional wave propagation.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{DWGNetwork.png}
+\caption{Digital waveguide mesh, obtained by connecting scattering junctions (W-ports) 
+through unit delays. }
+\label{fig:dwgmesh}
+\end{figure}
+
+\subsubsection{Reduction of a DWG model to a
+single delay loop structure (\textit{optional})}
+\subsubsection{Commuted DWG synthesis (\textit{optional})}
+\clearpage

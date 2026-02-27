@@ -1,0 +1,836 @@
+\section{Reverberation Algorithms}
+
+\subsection{Introduction}
+
+\textbf{Artificial reverberation}, first introduced by Schroeder, simulates how sound interacts with surfaces in a space, extending the duration of sound through \textbf{reflections} and \textbf{diffusions}. 
+
+As sound radiates, it interacts with \textbf{surfaces}, creating multiple delayed \textbf{echoes} that convey spatial characteristics to the listener.
+In closed spaces, the propagation speed of sound causes these reflections to overlap, producing a smearing effect that provides cues about the \textbf{size} and \textbf{shape} of the environment.
+
+Early artificial reverberation was developed in the 1920s for music broadcasting by sending \textit{dry signals to reverberant chambers}.
+Later, devices like tape delays, spring reverberators and plates emerged, setting the stage for modern digital reverberation systems.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{rev 2.png}
+    \includegraphics[width=0.75\linewidth]{rev 1.png}
+    \caption{Example of artificial reverberation products}
+\end{figure}
+
+Sound reaches a listener in distinct stages.
+Initially, the direct sound path travels straight from the source to the listener, arriving after a delay \( T_0 \).
+This \textbf{direct sound} provides information about the \textbf{source's distance and direction}.
+Subsequently, \textbf{early reflections} occur as sound waves bounce off nearby surfaces.
+These reflections convey \textbf{spatial characteristics}, such as the \textbf{geometry} and \textbf{material properties} of the environment.
+Over time, reflections propagate further, interacting with more surfaces and creating a dense field of echoes.
+This \textbf{late reverberation stage}, characterized by a gradually \textbf{decaying sound tail}, is statistically modelled by Gaussian noise and carries information about the \textbf{overall size} and \textbf{absorption characteristics} of the space (qualitative feature of the enviroment) and pleasament of revereberation (aesthetic feature of enviroment).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{spl.png}
+    \caption{Sound Pressure Levels (top) and models (bottom) of direct sound and reverberation components}
+\end{figure}
+
+Traditional reverberation devices, like plates and chambers, were effective in producing high-quality reverberation, but had several limitations.
+They were \textit{heavy} and difficult to transport, \textit{sensitive} to external disturbances and required specialized \textit{maintenance}.
+Additionally, their acoustic response could vary between units and over time due to \textit{environmental factors}.
+
+\textbf{Computational reverberation methods} offered a more practical solution, promising \textit{portability}, \textit{repeatability} and the possibility of \textit{automation}.
+While \textbf{room responses} are perceived as temporal sequences of reflections, computational methods often rely on lumped elements, posing a challenge in accurately replicating the behaviour of a distributed system.
+
+Reverberation can be treated as a \textbf{linear and time-invariant (LTI)} process, allowing to model it as a \textbf{convolution} between the input signal and the system's \textbf{impulse response}: this approach simplifies the analysis. 
+
+The primary objective is to recreate the \textbf{perceived auditory experience}: emphasis is placed on capturing the psychoacoustic effects of specific features within the impulse response.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{IR church.png}
+    \caption{IR of a large church - time evolution (top) and power spectogram (bottom)}
+\end{figure}
+
+\textbf{Reverberation algorithms} fall into three primary categories:
+
+1. \textbf{Delay Networks}: the input signal is delayed, filtered and fed back along multiple paths, according to parametrized reverberation characteristics;
+
+2. \textbf{Convolutional Reverb}: a dry signal is convolved with a pre-recorded or estimated \textbf{Room Impulse Response (RIR)} to reproduce specific acoustic spaces;
+
+3. \textbf{Computational Acoustics}: acoustic properties are modelled using simulations based on geometric and physical parameters. Signal drives a simulation of acoustic energy propagation in the modeled geometry.
+
+The choice of the algorithm depends on \textit{computational resources} and the application.
+
+\clearpage
+
+\subsection{Descriptors of Reverberation}
+
+\textbf{Room Impulse Responses (RIRs)} inherently present complex and irregular structures, making them less suitable for deriving compact \textbf{reverberation descriptors}. 
+To address this, Schroeder proposed the use of a monotonic and more regular function, the \textbf{Energy Decay Curve (EDC)}, which measures the \textit{remaining energy} in the RIR $h(\tau)$ \textit{at a given time}:
+
+\[
+ h_\text{EDC}(t) = \int_t^{\infty} h^2(\tau) \  d\tau
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{rir.png}
+    \includegraphics[width=0.4\linewidth]{edc.png}
+    \caption{RIRs (left) and EDCs (right) for different $T_{60}$ values}
+\end{figure}
+
+The EDC decays smoothly and allows for a precise definition of \textbf{decay time}, specifically the time \( T_{60} \) required for the EDC to \textbf{drop by 60 dB}:
+
+\[
+T_{60} = \left\{ t : [h_{\text{EDC}}(t)]_{\text{dB}} = [h_{\text{EDC}}(0)]_{\text{dB}} - 60 \right\}
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.38\linewidth]{EDC estimation.png}
+    \caption{$T_{60}$ measurements - estimated EDC and extrapolation of the decay time}
+\end{figure}
+In theory the EDC decays exponentially, in real measurements the EDC does not go down forever, but at some point it flattens out because the signal energy becomes comparable to the background noise level of the measuring system (noise floor). To estimate T60 we fit a straight line (slope) to the portion of the decay where the slope is still exponential, then we extrapolate that line until it reaches -60 dB.
+
+
+When conditions are not optimal for measuring \( T_{60} \), we may use alternative definitions such as \( T_{40} \) and \( T_{20} \):
+
+\[
+T_{40} = \left\{ t : [h_{\text{EDC}}(t)]_{\text{dB}} = [h_{\text{EDC}}(0)]_{\text{dB}} - 40 \right\} \cdot 1.5, \qquad
+T_{20} = \left\{ t : [h_{\text{EDC}}(t)]_{\text{dB}} = [h_{\text{EDC}}(0)]_{\text{dB}} - 20 \right\} \cdot 3
+\]
+
+Those alternative decay times, which also describe the time required for a 60 dB decay, are acceptable whenever the the EDC profile is linear enough so that:
+
+\[
+T_{60} \approx T_{40} \approx T_{20}
+\]
+
+We can introduce the \textbf{Energy Decay Relief (EDR)} to generalise the EDC analysis to multiple frequency bands:
+
+\[
+H_\text{EDR}(n, k) = \sum_{m=n}^M |H(m, k)|^2
+\]
+
+The term \( H(m, k) \) is the bin k of the STFT at time frame \( m \), while $M$ is the number of time frames (typically of length $30-40$ ms).
+The descriptor $H_\text{EDR}(n, k)$ shows the total signal energy remaining at time $t_n$ in the frequency band centered at $f_k$.
+
+The \textbf{Energy Decay Curve (EDC)} measures how the total energy of a signal decays over time, providing a global view of the reverberation process.  
+The \textbf{Energy Decay Relief (EDR)}, on the other hand, extends this concept to specific frequency bands.
+Instead of analysing the overall decay, it tracks how energy decays across different frequency components, allowing for a more detailed spectral analysis of the reverberation.  
+
+In the context of resonators, the EDR can be applied to examine the \textit{decay characteristics} of a \textit{violin body impulse response}, often interpreted as a \textit{small box reverberator}.
+The energy is summed over each Bark band, representing critical bands of hearing.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{EDR boston.png}
+    \includegraphics[width=0.4\linewidth]{EDR violin.png}
+    \caption{EDRs - occupied Boston Symphony Hall (left) and violin body IR (right)}
+\end{figure} 
+
+Further descriptors include:
+
+\begin{itemize}
+    \item \textbf{Center Time} \( T_s \), representing the \textit{centroid} of the squared impulse response:
+    
+    \[
+    T_s = \frac{\int_0^{\infty} \tau \cdot  h^2(\tau) \  d\tau}{\int_0^{\infty} h^2(\tau) \  d\tau} \quad \text{[s]}
+    \]
+
+    \item \textbf{Clarity Index} \( C_{t_e} \), indicating the \textit{early-to-late energy ratio} over a given time limit \( t_e \) (order of ms) that separates early reflections from late reverberations:
+    
+    \[
+    C_{t_e} = 10 \log_{10} \left( \frac{\int_0^{t_e} h^2(\tau) \  d\tau}{\int_{t_e}^{\infty} h^2(\tau) \  d\tau} \right) \quad  \text{[dB]}
+    \]
+
+    \item \textbf{Definition Index} \( D_{50} \), representing the \textit{early-to-total energy ratio} within the first 50 ms:
+    
+    \[
+    D_{50} = \frac{\int_0^{\SI{50}{\milli\second}} h^2(\tau) \  d\tau}{\int_0^{\infty} h^2(\tau) \  d\tau} \quad  \text{[\%]}
+    \]
+\end{itemize}
+
+The \textbf{Room Transfer Function (RTF)} is the Fourier Transform of the room impulse response (RIR).
+It shows how sound reflections distribute across different frequencies.
+As time progresses, the number of resonant frequencies increases, causing the spacing between these resonant modes to decrease.
+The \textbf{maximum frequency spacing} between two resonating modes can be estimated using the following expression:
+
+\[
+\Delta f_\text{max} \approx \frac{4}{T_{60}}, \qquad \text{valid for} \quad f > f_g \approx 2000 \sqrt{\frac{T_{60}}{V}}, \qquad V: \text{volume [m\textsuperscript{3}]}
+\]
+
+% \clearpage
+
+The \textbf{number of echoes} $N_t$ in the RIR, that we can observe up to a certain time \( t \) and its derivative - i.e. the \textbf{density of echoes} over time - can be approximated as:
+
+\[
+N_t = \frac{4 \pi (ct)^3}{3V}, \qquad
+\frac{dN_t}{dt} = \frac{4 \pi c^3}{\cancel{3} V} \cancel{3}t^2 = \frac{4 \pi c^3 t^2}{V}
+\]
+
+\clearpage
+
+\subsection{The Reverb Problem}
+
+\subsubsection{Direct Implementation}
+
+In practical scenarios involving multiple sound sources and listeners, the cost of implementing room impulse responses (RIRs) can become substantial due to the computational load of \textbf{convolution operations} (not a good deal).
+For instance, considering three sources and one listener (with two ears), the output is given by six convolutions, three per each ear:
+
+\[
+\begin{cases}
+y_1(n) = (s_1 * h_{11})(n) + (s_2 * h_{12})(n) + (s_3 * h_{13})(n) \\
+y_2(n) = (s_1 * h_{21})(n) + (s_2 * h_{22})(n) + (s_3 * h_{23})(n)
+\end{cases}
+\]
+
+Each term \( h_{ij}(n) \) denotes the impulse response describing sounds from source \( j=1,2,3 \) reaching the ear \( i=1,2 \). 
+Those filters should include pinnae filtering and they should change if anything in the room changes.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.37\linewidth]{direct convolution.png}
+    \includegraphics[width=0.35\linewidth]{h23.png}
+    \caption{Direct implementation of reverb - block diagram (left) and example of filter $h_{23}$ (right)}
+\end{figure}
+
+
+For small n (early times in the IR) only a few strong components appear (direct sound, early reflections), so the filter is sparse with most coefficients nearly zero. A tapped delay line (TDL) is ideal here, since it represents just those significant taps (delays with gain), making it much more efficient than storing a long FIR filter filled with zeros.
+
+This setup leads to a matrix representation in the z-domain:
+
+\[
+\begin{pmatrix}
+Y_1(z) \\
+Y_2(z)
+\end{pmatrix} = \begin{bmatrix}
+H_{11}(z) & H_{12}(z) & H_{13}(z) \\
+H_{21}(z) & H_{22}(z) & H_{23}(z)
+\end{bmatrix}
+\begin{pmatrix}
+S_1(z) \\
+S_2(z) \\
+S_3(z)
+\end{pmatrix}
+\]
+
+Given the computational complexity, \textit{direct implementation} of such a transfer functions matrix can be \textit{prohibitive}.
+For example, with \( T_{60} = 1\) s and \( f_s = 50\) KHz, each filter requires 50 000 multiplications and additions per sample, resulting in 30 billion operations per second for a three-source and one-listener setup.
+
+To mitigate these costs, more efficient methods like \textbf{Fast Fourier Transform (FFT) convolution} are employed, although throughput delay must be considered.
+Nevertheless, the \textit{implementation of point-to-point transfer function} is typically \textit{too expensive for real-time} processing.
+
+
+\subsubsection{Room Physical Models}
+
+A complete \textbf{physical model} of a room enables the simulation of source and listener positioning \textit{without altering the room response}.
+Spatialized 3D audio output can be obtained using methods like virtual dummy heads.
+However, such models demand \textbf{extensive computational resources}:
+
+\begin{itemize}
+    \item A small room (4m $\times$ 4m $\times$ 3m) involves approximately 75 million grid points, requiring \(2.6 \times 10^{13}\) operations per second;
+    \item A larger concert hall (30m $\times$ 15m $\times$ 6m) requires over \(1.5 \times 10^{15}\) operations per second.
+\end{itemize}
+
+Thus, physical models with fine-grained resolution are impractical for real-time applications in large spaces.
+Instead, perceptually relevant features are prioritized for simulation.
+
+\subsubsection{Perceptual Aspects and Metrics}
+
+Human \textbf{perception of reverberation} is more sensitive to specific attributes, allowing to reduce the simulation complexity. 
+
+The \textbf{echo density} is proportional to $t^2$, so after some time it becomes so high that we are not able to distinguish each echo: a possible approximation is to model the \textbf{late reverberation} using a \textbf{stochastic process}, reducing the computation burden.
+This observation allows to divide the impulse response in two segments: \textbf{early reflections} - with relatively sparse first echoes - and \textbf{late reverberation} - characterised by statistic response.
+
+The \textbf{mode density} is proportional to $f^2$, so for \textbf{high frequencies} the number of resonances becomes so high that we are not able to distinguish them perfectly, becoming randomly placed: a possible approximation is to model only the \textbf{perceivable modes}, reducing the computation burden.
+This observation allows to divide the frequency response in two segments: \textbf{low frequencies} - with sparse distribution of resonant modes - and \textbf{high frequency} - characterised by random frequency response.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.50\linewidth]{rir rtf.png}
+    \caption{Perceptual aspects of reverberation - room impulse response (top) and room transfer function (bottom)}
+\end{figure}
+
+To effectively design an \textbf{artificial reverberator}, we must defined several \textbf{control parameters}:
+
+\begin{itemize}
+    \item Desired reverberation time \( T_{60}(f) \) for at least three frequency bands;
+    \item Signal power gain \( G^2(f) \) at each frequency:
+    \item Clarity index \( C(f) \);
+    \item Inter-aural correlation coefficient \( \rho(f) \) at left and right ears.
+\end{itemize}
+
+\clearpage
+
+\subsection{Reverberation Algorithms - Early Reflections}
+
+In \textbf{artificial reverberation design}, the impulse response is typically divided into two parts: \textit{early reflections} and \textit{late reverberation}.
+The \textbf{early reflections} are defined as the initial part of the impulse response, up to the point where the signal begins to behave in a statistically random way.
+This boundary is often assumed to be around the first 100 milliseconds, though more accurate methods involve testing for statistical properties such as \textit{Gaussianity}:
+
+\begin{itemize}
+    \item \textit{Histogram test}: slicing the IR in windows of 10 ms and checking for a bell curve in the amplitudes;
+    \item \textit{Exponential fit of EDC}: defining an exponential and fits to the EDC profile.
+    \item \textit{Crest factor test}: checking the ratio between peak amplitude and RMS, to compare with a standardized value of 3dB for Gaussian noise.
+\end{itemize}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{early + late.png}
+    \caption{Reverb block diagram – early reflections and late reverb}
+\end{figure}
+
+Early reflections are typically implemented using \textbf{Tapped Delay Lines (TDLs)}.
+These are essentially FIR filters where the \textbf{taps} are placed at non-uniform delay intervals: each delayed copy of the input signal corresponds to a reflection arriving at irregular times, as it would occur in a real acoustic environment.
+The exact coefficients of the TDL are usually computed using models from \textbf{geometrical acoustics}, which aim to simulate how sound reflects off surfaces in a room.
+According to Kendall, these early reflections should also be spatialized, as they play a key role in creating the spatial impression of the sound environment.
+
+It’s worth noticing that \textbf{FFT-based implementations}, while being computationally efficient, introduce block-based \textbf{latency} of the order of \( 2^N \) samples: such delays are often unacceptable in \textbf{real-time} audio applications.
+
+\subsubsection{Schroeder's Tapped Delay Line}
+
+The simplest implementation of the reflection echoes consists in using $N$ 1-sample delays ($z^{-1}$) and corresponding weights ($a_i$):
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{canonical FIR.png}
+    \caption{Canonical direct form FIR filter with single sample delays}
+\end{figure}
+
+Considering that the echoes are sparse in the early reflection region, Schroeder proposed the concept of TDL, where each echo is described by its own delay $z^{-m_i}$ - with respect to the original signal $x(n)$ - and the late reverberation is characterised by a filter $R(z)$:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{tapped delay line.png}
+    \caption{Schroeder TDL structure}
+\end{figure}
+
+Notice that, even if the delay blocks are represented as in series, each term $m_i$ refers to the delay samples between original sound and $i$\textsuperscript{th} reflection - the delay blocks do not sum up as they should in a series configuration, instead they are in parallel branches.
+
+\subsubsection{Moorer's Tapped Delay Line}
+
+Moorer proposed an alternative architecture in which the output of the early reflection TDL is used to drive the \textbf{late reverberation block}, instead of it being part of the early reflection structure, in order to increase the echo density of the late reverb.
+In this design, two \textbf{delays} \( D_1 \) and \( D_2 \) are selected so that the late reverberator tail begins immediatly after the last early reflection in the TDL.
+The \textbf{gain} \( g \) controls the balance between early and late reverberation, ensuring a smooth transition between the two components and allowing the correct implementation of the late part of the signal, often modelled as a recursive structure \( R(z) \).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{Moorer reverb.png}
+    \caption{Moorer TDL structure}
+\end{figure}
+
+\subsubsection{Advanced Reverb Structure (\textit{optional})}
+
+Schroeder proposed an \textbf{extension} to the basic reverberator structure by replacing the constant gains \( a_i \) with \textbf{frequency-dependent filters} \( A_i(z) \): this modification allows the system to account for frequency-dependent \textbf{energy losses} - such as those caused by reflections off walls and propagation through air.
+Each filter \( A_i(z) \) is designed based on the reflection history of the corresponding echo, making the reverberation more realistic by modelling how higher frequencies tend to be absorbed more than lower ones.
+
+According to Kahrs and Brandenburg, if the reverberation is intended for \textbf{headphone listening}, it is also possible to associate a \textbf{directional filter} to each echo in order to simulate spatial cues.
+In this case, the transfer function \( A_i(z) \) models the absorptive losses, while \( H_{L,i}(z) \) and \( H_{R,i}(z) \) represent the \textbf{Head-Related Transfer Functions (HRTFs)} for left and right ears respectively, taking into account the direction from which the echo arrives.
+
+While this approach enhances realism by introducing directional information and frequency-dependent filtering, it is not entirely feasible in practice and requires further discussion.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{silde 27.png}
+    \caption{Extension of the basic reverberator - frequency-dependent gains $A_i(z)$ and Head-Related Transfer Functions $H_L(z)$ and $H_R(z)$}
+\end{figure}
+
+Considering that the \textbf{early echoes} are not perceived as individual events, it seems unlikely that the \textbf{spectral characteristics} of each echo need to be modelled so carefully.
+It is far more efficient to sum sets of echoes together and process them with the \textbf{same filter}, so that all the echoes in a set have the \textbf{same absorption and spatial location}.
+
+Another possibility is to reproduce the \textbf{inter-aural time} and \textbf{intensity difference} for each echo separately and lump the remaining spectral cues into an average directional filter.
+Each echo has independent gain, inter-aural time and intensity difference, allowing for individual lateral locations.
+The final filter reproduces the remaining spectral features, obtained by weighted average of the various HRTFs and absorptive filters.
+
+Notice that if the reverberation is not presented binaurally, the early lateral echoes will not produce spatial impression, but will cause tonal colouration of the sound.
+In this case it may be preferable to omit the early echoes altogether.
+This is an important consideration in professional recording and is the reason why orchestras are often moved to the concert hall floor when recording - to avoid the early stage reflections
+
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{slide28.png}
+    \caption{Simplification of the basic reverberator extension}
+\end{figure}
+
+Griesinger proposed an efficient algorithm that renders a convincing-sounding early reverberation, with a good sensation of spatial impression.
+Griesinger’s binaural echo simulator takes a \textbf{monophonic input} and produces \textbf{stereo outputs} intended for listening over \textbf{headphones}.
+
+The algorithm simulates a frontally incident direct sound plus \textbf{six lateral reflections} - three per side.
+The \textbf{echo times} are chosen arbitrarily - between 10 and 80 ms in order to provide a \textbf{strong spatial impression} - or may be derived from geometrical models.
+The algorithm is a variation of the previous structures: two sets of echoes are formed using a basic TDL structure, then each set is processed through the same directional filter $H_{LP}(z)$, which is modelled using a delay of 0.8 ms and a one-pole low-pass filter with a 2 KHz cutoff.
+
+Various degrees of \textbf{spatial impression} can be obtained by increasing the \textbf{gain of the echoes} $g_e$.
+Whether the spatial impression is heard as a surrounding spaciousness or as an increase in the source width depends on the input signal and the strength and timing of the reflections.
+This early echo simulator sounds very good with \textbf{speech} or \textbf{vocal music} as input.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{slide 29.png}
+    \caption{Schematic of Griesinger's reverberation algorithm}
+\end{figure}
+
+\clearpage
+
+\subsection{Reverberation Algorithms - Late Reverberations}
+
+To achieve \textbf{high-quality late reverberation}, it is important that the \textbf{decay} of the sound energy is smooth - but not excessively uniform - and that the \textbf{frequency response} is even without being too regular.
+Although producing an exponential decay is relatively easy from a signal processing perspective, making this decay \textbf{perceptually smooth} is more difficult: we need to avoid unnatural artifacts.
+A well-shaped frequency response - without noticeable peaks or gaps - is more likely when the modal density is high and the modes are evenly distributed.
+However, if the spacing between modes is too regular, it can create unwanted periodic effects in the time domain that are audible.
+
+Moorer proposed an ideal model for late reverberation in which the signal behaves like \textbf{exponentially decaying white noise}, which ensures a \textit{smooth decay} over time and across frequency bands.
+In such models, \textbf{higher frequencies} usually decay faster than lower ones, which aligns with real acoustic behaviour.
+
+According to Schroeder’s \textit{empirical guideline}, late reverberation should have at least 1000 echoes per second to sound smooth, while impulsive sounds may require densities of 10,000 echoes per second (or more) to avoid sounding sparse or mechanical.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.47\linewidth]{late rev.png}
+    \includegraphics[width=0.4\linewidth]{late rev 2.png}
+    \caption{Reverberation for music production}
+\end{figure}
+
+\subsubsection{Comb Filtering}
+
+A \textbf{comb filter} introduces a \textbf{delayed version} of the signal back into the system through a \textbf{feedback loop} with gain \( g \). The difference equation describing the filter is:
+
+\[
+y(n) = g \cdot y(n - m) + x(n - m)
+\]
+
+Taking the \( z \)-transform, we obtain the \textbf{transfer function} $H(z)$ as:
+
+\[
+Y(z) = g z^{-m} Y(z) + z^{-m} X(z) \quad \Rightarrow \quad H(z) = \frac{Y(z)}{X(z)} = \frac{z^{-m}}{1 - g z^{-m}}
+\]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{late rev block.png}
+    \caption{Comb filtering - IIR implementation (left) and pole-zero plot (right)}
+\end{figure}
+
+This structure results in a periodic comb-like frequency response and a pole pattern close to the unit circle (zeros in the origin), typically used for modelling resonances in artificial reverberation systems.
+This is not the best filter to model the reverberation phenomena.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{comb filter.png}
+    \caption{Comb filtering - impulse response (left) and magnitude response (right)}
+\end{figure}
+
+\subsubsection{All-Pass Filtering}
+
+An \textbf{all-pass filter (APF)} modifies the \textbf{phase} of a signal while preserving its magnitude spectrum.
+It uses both feed-forward and feedback paths with gain \( g \) and a delay of \( m \) samples. The time-domain difference equation is:
+
+\[
+y(n) - g \cdot y(n - m) = -g \cdot x(n) + x(n - m)
+\]
+
+Taking the \( z \)-transform, we obtain the \textbf{transfer function} $H(z)$ as:
+
+\[
+(1 - g z^{-m}) Y(z) = (-g + z^{-m}) X(z) \quad \Rightarrow \quad H(z) = \frac{Y(z)}{X(z)} = \frac{-g + z^{-m}}{1 - g z^{-m}}
+\]
+
+This structure results in a \textbf{flat magnitude response} across all frequencies, with \textbf{phase modifications} depending on the delay and gain. Its pole-zero pattern is symmetric with respect to the unit circle and they are counterbalance with respect to the 0 position, ensuring stability.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{allpass rev.png}
+    \caption{All-pass filtering - IIR implementation (left) and pole-zero plot(right)}
+\end{figure}
+
+The \textbf{impulse response} of this all-pass filter is basically the same as in the comb filter, aside from the first sample in the origin and a scaling factor. All-pass filters are commonly used in reverberation design because they have a \textbf{flat magnitude response}, meaning they do not change the frequency content of the sound.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{allpass.png}
+    \caption{All-pass filtering - IIR implementation (left) and pole-zero plot(right)}
+\end{figure}
+
+Schroeder’s idea to use all-pass filters was particularly clever, since these filters do not directly imitate any natural acoustic process.
+However, they are very effective in modelling reverberation because they allows designers to control the reverberation's \textbf{duration} and \textbf{echo density} without affecting its tonal colour.
+Although all-pass filters were introduced to \textbf{reduce the timbral colouration} caused by comb filters, their impulse responses are almost identical.
+This is because our hearing system analyses sounds over short-time windows, while the frequency behaviour of all-pass filters is defined over an infinite duration.
+As a result, they do not fully eliminate colouration in practice.
+
+Regarding whether APFs are truly \textbf{colourless}, it is important to note that their impulse response is perceived as colourless only \textbf{when extremely short} (< 10ms).
+Longer APF impulse responses tend to sound similar to feedback comb filters, introducing noticeable colouration.
+Unlike comb filters, which cause strong variations in gain across different frequencies, all-pass filters apply the same gain to all steady sounds - like pure sine waves - regardless of their frequency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{allpass ir.png}
+    \includegraphics[width=0.4\linewidth]{feedback ir.png}
+    \caption{Allpass IR (left) and Feedback Comb filter IR (right), $M=7$ and $g=0.7$}
+\end{figure}
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Comb vs. All-pass Filters in Reverberation}]
+
+\textbf{Comb Filter:}
+\begin{itemize}
+    \item Introduces echoes and controls decay time via feedback.
+    \item Creates peaks and notches in the frequency response.
+    \item Can cause unwanted tonal coloration.
+\end{itemize}
+
+\textbf{Allpass Filter:}
+\begin{itemize}
+    \item Increases echo density without affecting frequency content.
+    \item Has flat magnitude response across all frequencies.
+    \item Helps preserve the natural timbre of the sound.
+\end{itemize}
+
+\end{tcolorbox}
+
+\subsubsection{Gains and Reverberation Time}
+
+The \textbf{decay} of the response of a comb filter is governed by the gain coefficient \( g \).
+To ensure that this decay corresponds to a desired \textbf{reverberation time} \( T_{60} \), the following condition must hold:
+
+\[
+\frac{20 \log_{10}(g)}{mT_s} = \frac{-60}{T_{60}} \quad \Rightarrow \quad g = 10^{-\frac{3mT_s}{T_{60}}}
+\]
+
+This relationship also applies to all-pass filters (APFs), since their impulse response closely matches that of a comb filter.
+However, neither comb filters nor APFs alone generate enough echo density for realistic reverberation.
+Therefore, more complex configurations are needed, combining multiple filters.
+
+\subsubsection{Comb-filters Combination}
+
+It is important to note that \textbf{comb filters cannot be cascaded}, because cascading corresponds to multiplying their transfer functions.
+This multiplication causes frequency peaks that are not common to all comb filters to be cancelled out, thus reducing the richness of the reverberation.
+Therefore, comb filters can only be combined effectively in \textbf{parallel configuration}, in order to account for the resonances of each comb filter:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{combining combs.png}
+    \caption{Combination of comb filters}
+\end{figure}
+
+The \textbf{transfer function} \( H(z) \) of a \textbf{parallel comb filter configuration} with \( N \) comb filters is:
+
+\[
+H(z) = \sum_{i=1}^N H_i(z) = \sum_{i=1}^{N} \frac{z^{-m_i}}{1 - g_i z^{-m_i}}
+\]
+
+Each comb filter is characterized by delay length \( m_i \) and gain coefficient \( g_i \).
+The poles of this system are found as the roots of the following equation:
+
+\[
+\prod_{i=1}^N \left( g_i - z^{m_i} \right) = 0
+\]
+
+For \textbf{stable} and \textbf{uniform decay}, the poles must have \textbf{equal magnitudes}, ensuring consistent reverberation time across all modes:
+
+\[
+\gamma_i = \sqrt[m_i]{g_i} = 10^{-\frac{3 T_s}{T_{60}}}
+\]
+Assuming all the gains \(g_i\) are chosen to obtain the same reverberation time \(T_{60}\) the pole moduli (magnitude) will be the same for all comb filters.
+Consequently, all \textbf{resonant modes} of the parallel comb filter structure will \textbf{decay at the same rate}, ensuring a uniform temporal decay characteristic.
+If, however, the pole magnitudes differ, the poles with the \textbf{largest magnitudes will dominate} in the late reverberation tail by resonating the longest, thereby determining the \textbf{tonal colouration} of the late decay.
+To avoid such undesired tonal artifacts, it is crucial to enforce uniformity of the pole magnitudes across all filters.
+
+Furthermore, when the delay lengths \( m_i \) of the comb filters are chosen to be \textbf{incommensurate} - that is, to share no common factors - the resulting pole frequencies become \textbf{distinct} from one another.
+This design choice ensures that echoes from any two comb filters do not overlap until the product of their respective delay lengths, increasing echo density and improving the naturalness of the reverberation.
+
+Two critical criteria for achieving \textit{realistic reverberation algorithms} are the \textbf{modal density} and the \textbf{echo density}.
+The \textbf{modal density} - defined as the number of resonant modes per Hertz - for a set of $N$ parallel comb filters is:
+
+\[
+D_m = \sum_{i=0}^{N-1} \tau_i = N \tau
+\]
+
+The term \( \tau_i \) is the delay length of the \( i \)\textsuperscript{th} comb filter, while \( \tau \) is the average delay length across all comb filters.
+Unlike real acoustic spaces, the modal density of parallel comb filters remains \textbf{constant across frequencies}.
+In \textbf{real rooms}, however, the modal density tends to \textbf{flatten out} at a finite value \( D_f \).
+We can therefore design our parallel comb in such a way to reach that mode density:
+
+\[
+\sum_i \tau_i = D_m > D_f \approx \frac{T_{\max}}{4}
+\]
+
+The time \( T_{\max} \) represents the \textbf{maximum reverberation time} desired in the simulation.
+In practical implementations, however, it is common to ensure that the total delay exceeds \( T_{\max} \) to guarantee an adequately high modal density and hence a more natural reverberation response:
+
+\[
+\sum_i \tau_i > T_{\max}
+\]
+
+The \textbf{echo density} of a set of $N$ parallel comb filters is the aggregate of the echo densities of each individual comb filter.
+Each comb filter \( i \) generates one echo every \( \tau_i \) seconds, so the combined echo density - expressed as the number of echoes per second - is:
+
+\[
+D_e = \sum_{i=0}^{N-1} \frac{1}{\tau_i} \approx \frac{N}{\tau}
+\]
+
+Unlike real acoustic spaces where echo density evolves over time, the echo density in parallel comb filters remains \textbf{constant over time}.
+According to Schroeder, having an echo density of about 1000 echoes per second is enough to make artificial reverberation perceptually similar to natural and diffuse reverberation.
+
+By relating the \textbf{echo density} \( D_e \) to the \textbf{modal density} \( D_m \), we can estimate how many \textbf{comb filters} \( N \) are needed to reach a desired level of diffusion:
+
+\[
+N \approx \sqrt{D_m D_e}
+\]
+
+\subsubsection{Allpass-filters Combination}
+
+Unlike comb filters, which cannot be cascaded, \textbf{allpass filters must be cascaded} to form more complex reverberation structures.
+The cascade of multiple APFs remains an allpass filter, as cascading (\textbf{series configuration}) corresponds to multiplying their frequency responses - which in turn sums up the phase responses.
+
+In typical implementations, the \textbf{feedback gain} \( g \) of each APF is set around 0.7.
+The \textbf{delay samples} \( M_i \) are chosen to be \textbf{mutually prime} and span successive orders of magnitude - for example, lengths such as 1051, 337 and 113 samples - to ensure sufficient echo density and avoid overlapping periodicities.
+
+Each stage of an allpass filter takes a single non-zero input sample and spreads it out into a long response that lasts over time.
+Because of this behaviour, allpass filters are often called \textit{impulse expanders}, \textit{impulse diffusers}, or simply \textit{diffusers}.
+
+Even though allpass filters are \textbf{not based on a physical model} of how sound reflects diffusely in real spaces, they are useful in artificial reverberation.
+They work by turning individual reflections into a dense pattern of reflections, which helps create a smoother and more natural-sounding reverberation.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{combining apf.png}
+    \caption{Combination of allpass filters}
+\end{figure}
+
+\subsubsection{Schroeder's Reverberator}
+
+The Schroeder's reverberator is an \textbf{optimal combination} of both \textbf{comb} and \textbf{allpass filters} suggested to achieve realistic artificial reverberation.
+In this design, the delay lengths $m_i$ of both comb and allpass filters are carefully selected so that the ratio between the longest and shortest delays is approximately 1.5 - which typically corresponds to delays of about 30 ms and 45 ms. 
+The \textbf{gain coefficients} \( g_i \) of the \textbf{comb filters} are chosen to implement a desired \textbf{reverberation time} \( T_{60} \):
+
+\[
+g_i = 10^{-\frac{3 m_i T_s}{T_{60}}}, \qquad T_s: \text{sampling period [s]}
+\]
+
+The \textbf{allpass filters delays} are commonly set to 5 ms and 1.7 ms to provide the desired diffusion characteristics and smoothness in the reverberation tail.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{schroeder rev.png}
+    \caption{Block diagram of Schroeder's reverberator}
+\end{figure}
+
+The \textbf{JCRev reverberation algorithm} was developed by John Chowning and colleagues at CCRMA (Stanford University), based on the foundational ideas of Schroeder.
+It employs three Schroeder \textbf{allpass sections} $\mathrm{AP}_N^g$ and four \textbf{feed-forward comb filters} $\mathrm{FFCF}_N^g$:
+
+\[
+\mathrm{AP}_N^g \triangleq \frac{g + z^{-N}}{1 + g z^{-N}}, \qquad \mathrm{FFCF}_N^g \triangleq g + z^{-N}
+\]
+
+Schroeder proposed a progression of delay lengths for the filters which is approximately close to the following expression:
+
+\[
+M_i T \approx \frac{100 \ \mathrm{ms}}{3^i}, \qquad i = 0, 1, 2, 3, 4.
+\]
+
+In the end, the resulting signal is split into four outputs using fractional delays \( z^{-d f_s} \) to simulate \textbf{spatial diffusion effects}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.56\linewidth]{JCRev.png}
+    \caption{Block diagram of the JCRev}
+\end{figure}
+
+In this algorithm, comb filters impart distinctive \textbf{colouration} to the reverberation, influencing \textbf{perceptual cues} such as early reflections, room size and spatial impression.
+This colouration can sometimes be approximated with a single tapped delay line.
+
+In practical usage, the instrument's output is scaled and added to the reverberator input (\verb|RevIn|). The reverberator output (\verb|RevOut|) is routed through four delay lines, producing four decorrelated audio channels. 
+
+For \textbf{stereo} listening scenarios, Schroeder recommends applying a \textbf{mixing matrix} at the reverberator output to replace the decorrelating delay lines.
+The mixing matrix should maximize the richness of the reverberation while ensuring the output signals remain uncorrelated.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{45-1.png}
+    \includegraphics[width=0.3\linewidth]{45-2.png}
+    \caption{Mixing matrix (left), mix of two uncorrelated outputs for stereo reproduction (right)}
+\end{figure}
+
+The mixing matrix is the necessary tool to create \textbf{multiple output channels} for reverberation and consists in linear combinations of the input signals, coming from the comb filters - each row of the matrix is a comb filter output, while each column is an output bus.
+Regarding the mixing matrix \textbf{entries}, Schroeder suggested using only \( +1 \) and \( -1 \), while Jot recommended making the columns of the matrix orthogonal - so that the outputs would be as uncorrelated as possible.
+The goal of this approach is to generate reverberation outputs that are different from each other and not redundant, making the overall sound feel more spacious.
+
+In addition, Martin and Jot showed that if two signals \( y_1(t) \) and \( y_2(t) \) are \textbf{uncorrelated}, they can be mixed in a controlled way to achieve any desired level of \textbf{inter-aural cross-correlation}.
+
+\subsubsection{Feedback Delay Networks}
+
+\textbf{Feedback Delay Networks (FDNs)} are generalization of comb filters in \textbf{vector form}.
+They can also be seen as a generalization of state-space models, where instead of using unit delays only, \textbf{arbitrary delay lengths} are allowed.
+In this structure, the \textbf{direct path} is typically weighted by a factor \( d \), while a \textbf{tonal correction} filter \( E(z) \) equalizes the energy distribution across modes.
+A key design question is how to choose the \textbf{feedback matrix} to ensure desirable acoustic properties such as stability and modal density.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{feedback matrix.png}
+    \caption{FDN reverberator ($N=3$)}
+\end{figure}
+
+A key objective in artificial reverberation design is to achieve a \textbf{smooth frequency-dependent reverberation time}, so that we avoid situations where few resonant frequencies dominate, causing the decay to overextend.
+Since the reverberation tail is formed by the superposition of \textbf{decaying eigenmodes}, the rate at which these modes decay directly correspond to reverberation time.
+These decay rates are related to the magnitudes of the system’s poles: the closer the poles are to the unit circle, the longer the decay.
+
+To maintain precise control over these characteristics, FDNs are often designed to be \textbf{lossless} at first.
+In a lossless system, all \textbf{poles} lie exactly on the \textbf{unit circle}, meaning the modes neither grow nor decay. Frequency-dependent attenuation is then introduced by applying \textbf{filters}.
+This method ensures that the poles move smoothly inward, creating a frequency-dependent decay..
+Lossless FDNs can be implemented using \textbf{special feedback matrix} structures, such as \textbf{unitary} or \textbf{triangular} matrices, indipendent on the choice of delays. 
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Definition of Unitary Matrix}]
+A matrix \( \left[A\right]  \in \mathbb{R}^{N \times N}\) is \textbf{unitary} if for all vectors \(\underline{u} \in \mathbb{R}^N\):
+
+\[
+\norm{\left[ A \right] \cdot \underline{u}} = \norm{\underline{u}} \quad \Rightarrow \quad \norm{\left[ A \right] \cdot \left[ A \right]^T} = \norm{\left[ A \right]^T \cdot \left[ A \right]} = 1
+\]
+\end{tcolorbox}
+
+A unitary matrix guarantees lossless feedback in FDNs.
+However, to achieve the desired reverberation decay in a feedback loop, the unitary matrix must be multiplied by a factor smaller than one to introduce controlled attenuation.
+
+It has been proven that a lossless FDN requires the feedback matrix to have all its eigenvalues lying precisely on the unit circle in the complex plane, ensuring energy preservation within the network.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.38\linewidth]{fdn 4.png}
+    \caption{FDN reverberator ($N=4$) with feedback matrix $[A] \in \mathbb{R}^{4\times4}$}
+\end{figure}
+
+The input-output relationship of the FDN is given by
+
+\[
+y(n) = \sum_{i=1}^N c_i \cdot s_i(n) + d \cdot x(n), \qquad s_i(n + m_i) = \sum_{j=1}^N a_{ij} \cdot s_j(n) + b_i \cdot x(n)
+\]
+
+The output signal $y(n)$ is characterised by the states of the delay lines $s_i(n)$ - scaled by $c_i$ - and by the direct feed-through signal $x(n)$ - scaled by $d$.
+The state signals $s_i(n)$ are characterised by delay lengths $m_i$ and gain factors $b_i$.
+
+This structure effectively captures the reverberation process using a set of interconnected delay lines and a feedback matrix, providing \textbf{flexible control} over the reverberation characteristics.
+Note that the system can be put in a \textbf{matrix form} for a more compact representation:
+
+\[
+\underline{\mathrm{b}} = \begin{pmatrix}
+b_1 \\
+b_2 \\
+\vdots \\
+b_N
+\end{pmatrix},
+\qquad
+\underline{\mathrm{c}} = \begin{pmatrix}
+c_1 \\
+c_2 \\
+\vdots \\
+c_N
+\end{pmatrix},
+\qquad
+\underline{\mathrm{s}}(n) = \begin{pmatrix}
+s_1(n) \\
+s_2(n) \\
+\vdots \\
+s_N(n)
+\end{pmatrix}
+\]
+
+\[
+[\mathrm{A}] = \begin{bmatrix}
+a_{11} & a_{12} & \cdots & a_{1N} \\
+a_{21} & a_{22} & \cdots & a_{2N} \\
+\vdots & \vdots & \ddots & \vdots \\
+a_{N1} & a_{N2} & \cdots & a_{NN}
+\end{bmatrix}
+\qquad
+[\mathrm{D}_{\mathrm{m}}(z)] = \mathrm{diag}([z^{-m_1}, z^{-m_2}, \ldots, z^{-m_N}]) =
+\begin{bmatrix}
+z^{-m_1} & 0 & \cdots & 0 \\
+0 & z^{-m_2} & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & z^{-m_N}
+\end{bmatrix}
+\]
+
+In the $z$-domain, the previous equations for output $y(n)$ and states $s_i(n)$ become:
+
+\[
+Y(z) = \sum_{i=1}^N c_i \cdot S_i(z) + d \cdot X(z), \qquad S_i(z) \cdot z^{+m_i} = \sum_{j=1}^N a_{ij} \cdot S_j(z) + b_i \cdot X(z)
+\]
+
+Regarding the state signals, the matrix form is:
+
+\[
+\underline{\mathrm{S}}(z) = \left[\mathrm{D}_{\mathrm{m}}(z)\right] \left( \left[\mathrm{A}\right] \underline{\mathrm{S}}(z) + \underline{\mathrm{b}} \ \underline{\mathrm{X}}(z) \right)
+\quad \Rightarrow \quad
+\left[\mathrm{D}_{\mathrm{m}}^{-1}(z)\right] \ \underline{\mathrm{S}}(z) = \left[\mathrm{A}\right] \underline{\mathrm{S}}(z) + \underline{\mathrm{b}} \ \underline{\mathrm{X}}(z)
+\]
+
+\[
+\quad \Rightarrow \quad
+\left( \left[\mathrm{D}_{\mathrm{m}}^{-1}(z)\right] - \left[\mathrm{A}\right] \right) \underline{\mathrm{S}}(z) = \underline{\mathrm{b}} \ \underline{\mathrm{X}}(z)
+\quad \Rightarrow \quad
+\underline{\mathrm{S}}(z) = \left( \left[\mathrm{D}_{\mathrm{m}}^{-1}(z)\right] - \left[\mathrm{A}\right] \right)^{-1} \underline{\mathrm{b}} \ \underline{\mathrm{X}}(z)
+\]
+
+Regarding the output signal, the matrix form is:
+
+\[
+\underline{\mathrm{Y}}(z) = \underline{\mathrm{c}}^T \underline{\mathrm{S}}(z) + d \cdot \underline{\mathrm{X}}(z)
+\quad \Rightarrow \quad
+\underline{\mathrm{Y}}(z) = \underline{\mathrm{c}}^T \left( \left[\mathrm{D}_{\mathrm{m}}^{-1}(z)\right] - \left[\mathrm{A}\right] \right)^{-1} \left[\mathrm{b}\right] \underline{\mathrm{X}}(z) + d \cdot \underline{\mathrm{X}}(z)
+\]
+
+The transfer function is:
+
+\[
+\mathrm{H}(z) = \underline{\mathrm{c}}^T \left( \left[\mathrm{D}_{\mathrm{m}}^{-1}(z)\right] - \left[\mathrm{A}\right] \right)^{-1} \left[\mathrm{b}\right] + d
+\]
+
+This formulation captures the behaviour of the FDN in the frequency domain and is foundational for analysing its reverberation characteristics.
+The \textbf{order} of this system is determined by the total sum of the internal delays.
+The \textbf{zeros} of the system's transfer function are given by the roots of the following determinant expression:
+
+\[
+q(z) = \det\left( \left[\mathrm{D_{m}}(z)\right]^{-1} - [\mathrm{A}] + \frac{1}{d} \underline{\mathrm{b}} \cdot \underline{\mathrm{c}}^T \right)
+\]
+
+Conversely, the \textbf{poles} of the system are the roots of the following polynomial:
+
+\[
+p(z) = \det\left( \left[\mathrm{D_{m}}(z)\right]^{-1} - [\mathrm{A}] \right)
+\]
+
+This is referred to as the \textbf{generalized characteristic polynomial} of the matrix \( [A] \), with the delay vector \( \underline{\mathrm{m}} \).
+A FDN is considered \textbf{lossless} if \( p(z) \) has only \textbf{unimodular roots} - all the poles lie on the unit circle in the complex plane - ensuring no energy decay over time occurs.
+
+\subsubsection{Feedback Delay Networks and Digital Waveguide Networks}
+
+A central question in FDN design is how to \textbf{choose the feedback matrix} to control reverberation characteristics effectively.
+\textbf{Householder FDNs} use feedback matrices of the form
+
+\[
+[\mathrm{A}_N] = [\mathrm{I}_N] - \frac{2}{N} \underline{u} \cdot \underline{u}^T
+\]
+
+This corresponds to a network of $N$ digital waveguides intersecting at a single scattering junction.
+Each branch of the waveguide ends in an ideal reflection and if all waveguides have the same impedance (i.e. \(\underline{u}^T = [1, 1, \dots, 1]\)), the junction becomes isotropic and energy is evenly redistributed.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{scat jun.png}
+    \caption{Single scattering junction}
+\end{figure}
+
+A \textbf{rectilinear mesh} of DWNs can be used in 2D or 3D to simulate wave propagation in all spatial directions.
+This setup enables accurate simulation of wavefronts, and yields a diffuse sound field in the late reverberation stage while practical reflections average increasingly from geometry and mode density, and mode spacing grows randomly with time and frequency, giving accurate low-frequency behavior through high frequencies on rather short measuring data integration. Since most operation impulse responses are stationary, the method is computationally efficient and even sparse models are sufficient to capture the main perceptive features of reverberation.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{rect dwn.png}
+    \caption{Rectilinear DWN mesh}
+\end{figure}
+
+\subsection{Case Study: Arvedi Auditorium in Cremona (\textit{optional})}
+
+
+
+\clearpage

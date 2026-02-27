@@ -1,0 +1,386 @@
+\section{Spatial Sound with Loudspeakers: Stereophony and Panning}
+
+\subsection{Representation of virtual sound scenes}
+
+\subsubsection{Sound scene capture and representation}
+
+% Slide 5
+In a recording environment,\textit{ the sound scene is captured through an array of microphones} strategically placed within the space. The collected signals, combined with additional contextual information, form a comprehensive \textit{representation} of the sound scene.
+This representation is \textbf{ not static}: during the production process, it can be manipulated or modified to achieve desired effects. Once ready, \textit{the sound scene is reproduced by playing back the processed signals through a suitable audio reproduction system situated in a listening environment}.
+
+% Slide 4
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{real-virtual-sound-scenes-relationshi[.png}
+    \caption{Relationship between real and virtual sound scenes.}
+    \label{fig:enter-label}
+\end{figure}
+
+% Slide 6
+A \textbf{virtual source is an abstraction used to represent real sound sources}, such as a person speaking or a musical instrument. In a virtual sound scene, there may be several of these sources placed in different positions. The goal of the reproduction system is to recreate the sound scene in such a way that the listener perceives these virtual sources as if they were real (the desired scene).
+A virtual source includes:
+\begin{itemize}
+    \item The audio signal itself,
+    \item Metadata related to spatialization, such as the source’s position and orientation,
+    \item Additional properties, like loudness and other relevant attributes.
+\end{itemize}
+
+% Slide 7
+\textbf{Virtual sources} can be linked to physical models that simulate the behavior of real sound sources. These include plane waves, which represent sound traveling uniformly in a single direction and point sources, which emit sound equally in all directions. 
+In addition to these basic types, virtual sources can represent more complex interactions with the acoustic environment. For example, wide or diffuse sources simulate emissions that originate from a broader area, while other models capture reverberation or ambient characteristics, reproducing reflections and the overall coloration of the space.
+
+
+
+% Slide 8
+\textbf{Recording style 1:}In modern audio production, a complex sound scene is often created by recording each sound element separately. This allows full control over every object in the mix, making it possible to adjust and place them individually.
+After recording, spatialization parameters are applied to position each object precisely within the stereo or surround field. This approach is especially common in pop music production.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.25\linewidth]{adf.png}
+    \caption{Recording styles-Style 1}
+    \label{fig:enter-label}
+\end{figure}
+
+% Slide 9
+\textbf{Recording style 2:} This recording style \textit{utilizes a specialized microphone array designed to capture multiple sound events simultaneously}. Instead of isolating individual sources, this approach records the overall sound scene in a more holistic manner. The spatialization parameters and scene elements are implicitly defined by the recording setup, which is particularly suitable for classical music performances. This method allows the preservation of the natural ambiance and interaction among instruments, offering a rich and immersive listening experience.
+
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{aaaaaa.png}
+    \caption{Recording styles-Style 2}
+    \label{fig:enter-label}
+\end{figure}
+
+% Slide 10
+In practical audio production, \textbf{it is common to combine two different recording styles} to create a rich and immersive sound scene. This involves carefully placing microphones in space to capture audio signals effectively.
+
+A typical setup includes the use of spot \textbf{microphones placed close to individual instruments}, which helps to capture sound with greater detail and clarity. At the same time, ambient or \textbf{spatial microphones} may be used to preserve the natural acoustics of the environment.
+
+The sound editor then defines \textbf{spatialization parameters} that determine how each sound is positioned in the final mix. 
+The ultimate aim of sound field rendering is to \textbf{translate the virtual sound scene into loudspeaker signals} in a way that preserves spatial cues and enhances the listener’s overall experience.
+
+
+%slide 12
+\subsubsection{Approaches to Sound Scene Representation}
+
+There are three main approaches to representing and reproducing spatial audio, each with different levels of flexibility and complexity.
+
+The most common in audio production is the \textbf{channel-based method}, which includes formats like two-channel stereo and multichannel surround sound. In this case, \textbf{each audio channel corresponds to a specific loudspeaker} in a fixed layout. The loudspeaker signals are stored and transmitted as-is and for the reproduction to work correctly, the same speaker arrangement must be used in every playback setting. This method works well when dealing with a limited number of speakers and offers predictable results in controlled environments.
+
+A more flexible approach is the \textbf{transform-domain method}, where the sound scene is not stored as fixed loudspeaker signals, but rather encoded using mathematical basis functions. These are then \textit{decoded} during playback to generate the appropriate signals for any given loudspeaker setup. This allows for dynamic adaptation to different reproduction systems without needing to re-render the original content.
+
+Finally, the \textbf{object-based method} stores each virtual sound source individually, along with metadata describing its position and behavior. During playback, a rendering process uses this information to compute the appropriate loudspeaker signals in real time. This method provides the most flexibility, allowing individual sound objects to be moved, modified, or adapted to different environments or playback systems.
+
+
+
+% Slide 15
+\subsection{Two-channel Stereophony}
+
+\textbf{Two-channel stereophony} is the simplest and most commonly used method for presenting virtual sound sources. It works by using small differences in volume and/or timing between two loudspeakers to create the illusion that the sound is coming from a position somewhere between them.
+
+
+Mathematically, the signals driving the two loudspeakers can be expressed as:
+\[
+d_1(t) = g_1 s(t - \tau_1), \quad d_2(t) = g_2 s(t - \tau_2)
+\]
+where:
+\begin{itemize}
+    \item $s(t)$ is the signal emitted by the virtual source,
+    \item $g_1$ and $g_2$ are the respective gains applied to each loudspeaker,
+    \item $\tau_1$ and $\tau_2$ denote the time delays.
+\end{itemize}
+
+\textit{By carefully adjusting the time and level differences between the two loudspeakers, the listener perceives the virtual source as located somewhere in the spatial region between the two physical loudspeakers, enhancing the sense of directionality and spatial realism}.
+
+% Slide 16
+\textit{Amplitude panning}, where both channels have equal delay (\( \tau_1 = \tau_2 = 0 \)), is used in both channel-based and model-based audio systems. It works by adjusting the gain (amplitude) of the signal sent to each loudspeaker, allowing the perceived position of the sound to shift between speakers without introducing any timing differences.
+
+In contrast, \textit{time-delay panning} involves introducing a delay difference between channels (\( \tau_1 \neq \tau_2 \)) and is used only in channel-based systems. This method relies on the listener’s sensitivity to small timing differences to create spatial impressions and is not generally compatible with model-based rendering frameworks.
+
+
+
+\subsubsection{Model-Based Stereophony}
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.38\linewidth]{ere.png}
+    \caption{Two-channel stereophonic configuration}
+    \label{fig:enter-label}
+\end{figure}
+
+% Slide 20
+We will here proceed to the derivation of \textbf{panning law}. We begin by assuming that the loudspeakers are positioned in the far field relative to the listener, which is an idealization.
+The sound fields generated by the two loudspeakers can be expressed as:
+\[
+p_{R}(\underline{r}, \omega) = g_R e^{j \langle \underline{k}_R, \underline{r} \rangle}, \
+\underline{k}_R = \frac{\omega}{c} \cdot \begin{bmatrix} \sin(\theta_1) \\ \cos(\theta_1) \end{bmatrix}
+\qquad
+p_{L}(\underline{r}, \omega) = g_L e^{j \langle \underline{k}_L, \underline{r} \rangle}, \
+\underline{k}_L = \frac{\omega}{c} \cdot \begin{bmatrix} -\sin(\theta_1) \\ \cos(\theta_1) \end{bmatrix}
+\]
+Assuming the listener is located on the $x$-axis (i.e., $y=0$), the inner products simplify to:
+\[
+\langle \underline{k}_R, \underline{r} \rangle = \frac{\omega}{c} \sin(\theta_1) x = k_x x
+, \qquad 
+\langle \underline{k}_L, \underline{r} \rangle = - \frac{\omega}{c} \sin(\theta_1) x = -k_x x
+\]
+
+%slide 21
+\textit{The total sound field} at position $x$ on the $x$-axis \textbf{results from the superposition of the sound fields emitted by both loudspeakers}:
+\[
+p(x,0,\omega) = g_R e^{j k_x x} + g_L e^{-j k_x x}
+\]
+
+Applying Euler's identity to rewrite the exponentials in terms of sine and cosine functions:
+\[
+\begin{aligned}
+p(x,0,\omega) &= g_R \left( \cos(k_x x) + j \sin(k_x x) \right) + g_L \left( \cos(k_x x) - j \sin(k_x x) \right) \\
+&= (g_R + g_L) \cos(k_x x) + j (g_R - g_L) \sin(k_x x)
+\end{aligned}
+\]
+
+% Slide 22
+\textbf{The phase of the combined loudspeaker sound field} at position $x$ is given by:
+\[
+\angle p(x,0,\omega) = \arctan \left( \frac{g_R - g_L}{g_R + g_L} \tan(k_x x) \right)
+\]
+
+\textit{For a listener positioned very close to the origin}, where $k_x x \ll 1$, we can use linear approximations (Taylor's expansion, NB: add the 1st order approximations of both functions for more clarity) for both tangent and arctangent functions:
+\[
+\angle p(x,0,\omega) \approx \frac{g_R - g_L}{g_R + g_L} k_x x
+\]
+
+\textit{The goal is to approximate the \textbf{sound field of a plane wave} arriving from direction $\theta$} that is described by these equations:
+\[
+p_{\text{target}}(x,0,\omega) = e^{j \frac{\omega}{c} \sin(\theta) x}, \quad
+\angle p_{\text{target}}(x,0,\omega) = \frac{\omega}{c} \sin(\theta) x
+\]
+% slide 23
+The procedure to find the loudspeaker gains $g_R$ and $g_L$ is \textit{by equating the phases of the sound fields}:
+\[
+\frac{g_R - g_L}{g_R + g_L} \frac{\omega}{c} \sin(\theta_1) x = \frac{\omega}{c} \sin(\theta) x
+\]
+This leads to the \textbf{sine law of stereophony}:
+\[
+\sin(\theta) = \frac{g_R - g_L}{g_R + g_L} \sin(\theta_1)
+\]
+
+In other words, two loudspeakers placed symmetrically at angles \( \pm \theta_1 \) can \textbf{locally approximate a plane wave} arriving from direction \( \theta \), as perceived near the center (origin) of the listening area.
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Sine Law of Stereophony}]
+The sine law of stereophony describes how the perceived position of a virtual sound source between two loudspeakers depends on the amplitude difference between the signals. 
+
+This law helps explain how amplitude panning works: by adjusting the gain balance between channels, a sound can be positioned anywhere within the stereo field.
+\end{tcolorbox}
+% Slide 24
+In practical applications, the ratio $\frac{g_L}{g_R}$ can be controlled using the following relationship:
+\[
+\sin(\theta) = \frac{1 - \frac{g_L}{g_R}}{1 + \frac{g_L}{g_R}} \sin(\theta_1) \quad \Rightarrow \quad
+\frac{g_L}{g_R} = \frac{\sin(\theta_1) - \sin(\theta)}{\sin(\theta_1) + \sin(\theta)}
+\]
+% Slide 25: Matlab result
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\linewidth]{matlab.png}
+    \caption{Sine panning law}
+    \label{fig:enter-label}
+\end{figure}
+The picture above shows that we can approximate the non linear function with a linear function close to the origin.
+
+% slide 26: Matlab results
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.62\linewidth]{des.png}
+    \caption{Desired and Resulting field}
+    \label{fig:enter-label}
+\end{figure}
+Stereophony provides a coarse but effective approximation of the sound field, particularly in a small region near the origin, known as the \textit{sweet spot}.
+
+% Slide 27: nothing
+
+\subsubsection{Channel-Based Stereophony}
+% Slide 28
+\textbf{Recording with stereo microphones involves} two main concepts:
+
+\begin{itemize}
+    \item Creating level differences exploiting \textbf{microphone directivity}.
+    \item Creating time differences exploiting \textbf{microphone distance}.
+\end{itemize}
+% slide 29 
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{foto.png}
+    \caption{(a) Polar patterns of cardioid microphones illustrating their directional sensitivity.
+(b) Photo showing the physical setup of the XY stereo configuration with two cardioid microphones placed at a 90-degree angle}
+    \label{fig:enter-label}
+\end{figure}
+
+The \textbf{XY microphone configuration} uses two microphones placed very close together, typically angled at 90°. This setup captures spatial information through level differences, which are created by the microphones' directional orientation.
+
+Since the microphones are nearly coincident, there is \textbf{no time delay} between the signals they capture. Additionally, each microphone picks up part of the sound coming from behind the other, which would normally be attenuated. This mutual pickup helps compensate for energy loss at the rear of each microphone, resulting in a more balanced and coherent stereo image.
+
+
+% Slide 30
+The \textbf{Blumlein pair is an XY microphone configuration} with two pressure gradient microphones, typically bidirectional (figure-of-eight), placed at 90° to each other. This setup captures a highly realistic stereo image, particularly effective for room ambience and natural spatial depth.
+The directivity pattern for each microphone is defined as \( F(\alpha) = \cos(\alpha \pm \pi/4) \), where \( \alpha \) is the angle of the sound source relative to the stereo pair's forward axis. 
+
+If a source located at angle \( \alpha \) emits a signal \( S(\omega) \), the signals captured by the left and right microphones can be expressed as:
+\[
+x_L(\omega) = g_L S(\omega) = \cos(\alpha + \pi/4) S(\omega), \qquad
+x_R(\omega) = g_R S(\omega) = \cos(\alpha - \pi/4) S(\omega)
+\]
+
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.31\linewidth]{saed.png}
+    \caption{Polar plots illustrating the directivity patterns of the Blumlein pair microphones, showing the characteristic figure-eight pattern with a 90-degree orientation between them}
+    \label{fig:enter-label}
+\end{figure}
+% Slide 31
+By substituting the gains \( g_L \) and \( g_R \) from the expressions for \( x_L(\omega) \) and \( x_R(\omega) \) into the sine law of stereophony, we obtain:
+\[
+\sin(\theta) = \frac{\cos(\alpha - \pi/4) - \cos(\alpha + \pi/4)}{\cos(\alpha - \pi/4) + \cos(\alpha + \pi/4)} \sin(\theta_1)
+= \frac{2 \sin(\pi/4) \sin(\alpha)}{2 \cos(\pi/4) \cos(\alpha)} \sin(\theta_1)
+= \tan(\alpha) \sin(\theta_1)
+\]
+Here, \( \alpha \) is the angle of the sound source relative to the microphone pair axis, \( \theta_1 \) is the angle of the loudspeakers relative to the listener and \( \theta \) is the perceived angle of the virtual source relative to the listener.
+
+% slide 32: matlab result
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{photo.png}
+    \caption{Analysis of Blumlein Pair}
+    \label{fig:enter-label}
+\end{figure}
+
+% Slide 33
+The analysis of other \textbf{XY microphone configurations}, such as those using cardioid, super-cardioid, or hyper-cardioid patterns, follows similar principles, although the details can become more complex due to their different directional responses.
+
+Stereophonic reproduction is most accurate within a small area around the ideal listening position, where the listener is centered between the loudspeakers. 
+Outside of this central zone, the plane wave approximation no longer holds. As a result, the perceived direction of the virtual sound source becomes dependent on frequency and may shift toward the nearest loudspeaker, reducing spatial accuracy.
+
+
+% slide 34
+The \textbf{AB microphone configuration} with a pair of \textit{omnidirectional microphones} placed at a fixed distance apart. This setup creates a \textbf{time difference} between the signals captured by each microphone, which serves as the main spatial cue for the stereo image.
+
+Because omnidirectional microphones capture sound equally from all directions, the \textbf{level difference} between the two signals is minimal. 
+However, at high frequencies, this configuration can introduce \textit{comb filtering} effects due to interference between the delayed signals, which may result in unwanted coloration of the sound.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.25\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{vvvv.png}
+        \caption{AB stereo configuration with omnidirectional microphones}
+        \label{fig:ab-omni}
+    \end{minipage}
+    \begin{minipage}{0.25\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{cards.png}
+        \caption{AB stereo configuration with cardioid microphones}
+        \label{fig:ab-cardioid}
+    \end{minipage}
+\end{figure}
+
+
+% slide 35
+The \textbf{AB microphone configuration with cardioid microphones} introduces spatial cues using both \textbf{time and level differences}. The time difference comes from the physical spacing between the microphones, as in the traditional AB setup. In addition, the \textbf{level difference} is produced by the cardioid microphones’ directional pickup patterns, which respond more strongly to sounds coming from the front than from the sides or rear. This combination enhances spatial definition and stereo width compared to the omnidirectional AB configuration.
+
+
+% slide 37: nothing
+\subsection{Multi-channel Stereophony}
+% slide 38 
+Two-channel stereophony naturally limits the positioning of virtual sound sources to the space between the two loudspeakers. To create a wider and more immersive spatial image, additional loudspeakers can be introduced into the system.
+However, increasing the number of speakers also requires new \textbf{panning laws} that define how sound should be distributed across the loudspeakers. 
+
+
+% slide 40 
+\subsubsection{Vector-Based Amplitude Panning}
+\textbf{Vector-Based Amplitude Panning (VBAP)} is an extension of traditional amplitude panning adapted for multichannel audio systems. For each virtual sound source, the method selects a pair of loudspeakers that are best suited for reproducing the sound in the desired direction. It then calculates the appropriate gain values (panning function) for those speakers to place the source accurately in space. 
+
+% Slide 41 : VBAP illustration
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.33\linewidth]{gf.png}
+    \caption{Vector-Based Amplitude Panning (VBAP)}
+    \label{fig:enter-label}
+\end{figure}
+
+% slide 42
+In VBAP, it is assumed that \textit{the loudspeakers are positioned sufficiently far from the listener, so that the sound waves can be approximated as plane waves}. \textbf{The method generates a virtual sound source positioned between two adjacent loudspeakers}, labeled $n$ and $n+1$.
+
+The direction of the virtual source is represented by a unit vector $\underline{v}$, which can be expressed as a linear combination of the vectors representing the adjacent loudspeakers, encoded in the matrix $[M]$ and the gain vector $\underline{g}$:
+\[
+\underline{v} = [M] \underline{g}
+\]
+where the components are defined as:
+\[
+\underline{v} = \begin{bmatrix}
+\cos(\theta) \\
+\sin(\theta)
+\end{bmatrix}
+\quad
+\underline{g} = \begin{bmatrix}
+g_n \\
+g_{n+1}
+\end{bmatrix}
+\quad
+[M] = \begin{bmatrix}
+\cos(\theta_n) & \cos(\theta_{n+1}) \\
+\sin(\theta_n) & \sin(\theta_{n+1})
+\end{bmatrix}
+\]
+
+% Slide 43
+To determine the gain vector $\underline{g}$, we solve the equation
+\[
+\underline{g} = [M]^{-1} \underline{v}
+\]
+
+% Teacher started doing the demo but we can give a fuck-a-dee-fuck
+% We know that :
+% \begin{align*}
+%     [M]^{-1} & = \frac{1}{ \det( [M] )} 
+% \begin{bmatrix}
+% \sin \theta_{n+1} & -\cos \theta_{n+1} \\
+% -\sin \theta_n & \cos \theta_n
+% \end{bmatrix}\\
+%      \det([M]) & = \sin \theta_{n+1} \cos \theta_n - \sin \theta_n \cos \theta_{n+1} = \sin (\theta_{n+1} - \theta_n)
+% \end{align*}
+
+After inverting $[M]$ and multiplying by $\underline{v}$, we obtain the individual gains for the adjacent loudspeakers are expressed as functions of the virtual source angle $\theta$:
+\[
+g_n(\theta) = \frac{\sin(\theta_{n+1} - \theta)}{\sin(\theta_{n+1} - \theta_n)}
+, \qquad
+g_{n+1}(\theta) = \frac{\sin(\theta - \theta_n)}{\sin(\theta_{n+1} - \theta_n)}
+\]
+%\textbf{These formulas provide a smooth and continuous panning function that distributes the amplitude between the two loudspeakers to create the perception of a virtual source at angle $\theta$.}
+
+% Slide 44
+In the general case, for angles $\theta$ between two loudspeakers at positions $\theta_n$ and $\theta_{n+1}$, i.e. for $\theta_n \leq \theta \leq \theta_{n+1}$, the gain $g_\nu(\theta)$ for loudspeaker $\nu$ is defined as
+
+\[
+g_\nu(\theta) = 
+\begin{cases}
+\frac{\sin(\theta_{n+1} - \theta)}{\sin(\theta_{n+1} - \theta_n)}, & \text{for } \nu = n \\
+\frac{\sin(\theta - \theta_n)}{\sin(\theta_{n+1} - \theta_n)}, & \text{for } \nu = n+1 \\
+0, & \text{otherwise}
+\end{cases}
+\]
+
+%\textbf{This piecewise function ensures that the amplitude panning smoothly transitions between the two loudspeakers responsible for the virtual source at angle $\theta$}.
+
+
+% Slide 46
+\subsubsection{Channel-Based}
+
+\textbf{Multichannel audio recording} requires microphone setups that match the intended loudspeaker layout. For 5.1 surround sound, one of the most commonly used configurations is the \textit{Fukada tree}. This setup uses five cardioid microphones arranged to capture spatial information effectively: three are placed at the front (left, center and right) and two at the back (left surround and right surround). The Fukada tree is designed to provide a realistic and immersive surround image that translates well to a standard 5.1 playback system.
+
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{ri.png}
+    \caption{Recording techniques for multichannel - Fukada tree expansion}
+    \label{fig:enter-label}
+\end{figure}
+
+\clearpage

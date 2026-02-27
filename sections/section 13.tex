@@ -1,0 +1,450 @@
+\section{Spatial Sound with Loudspeakers: WaveField Synthesis}
+
+\subsection{Introduction}
+
+\textbf{Huygens’ principle} asserts that every point on a propagating wavefront can itself be regarded as a source of secondary spherical wavelets. By summing these wavelets, the original wavefront is reconstructed at a later time and distance. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{huygens1.png}
+    \includegraphics[width=0.3\linewidth]{huygens2.png}
+    \includegraphics[width=0.3\linewidth]{huygens3.png}
+    \caption{Huygens principle - real point source and spherical waves}
+\end{figure}
+
+In \textbf{Wave Field Synthesis}, we discretize this continuum of secondary sources into an \textbf{array of loudspeakers}: each speaker emits a carefully weighted and delayed signal so that their combined output recreates the desired sound field over an extended listening area.
+
+% Slide 7 
+The acoustic pressure inside a listening region \(\underline{r}\in\mathcal{V}\) can be exactly reproduced by the \textbf{Kirchhoff–Helmholtz integral}:
+\[
+  -\oint_{\partial\mathcal{V}}
+    \biggl[
+      \frac{\partial}{\partial \underline{n'}}\ p(\underline{r}',\omega)\;G\bigl(\underline{r}\mid\underline{r}',\omega\bigr)
+      \;-\;
+      p(\underline{r}',\omega)\;\frac{\partial}{\partial \underline{n'}}\ G\bigl(\underline{r}\mid\underline{r}',\omega\bigr)
+    \biggr]
+    \ \mathrm{d}A(\underline{r}')
+  \;=\;
+  \begin{cases}
+    p(\underline{r},\omega), & \underline{r}\in\mathcal{V},\\
+    0, & \underline{r}\notin\mathcal{V}.
+  \end{cases}
+\]
+
+In this formulation, \( G(\underline{r} \mid \underline{r}', \omega) \) represents the free-field Green’s function for a monopole source, while its normal derivative $
+\frac{\partial}{\partial \underline{n}'} G(\underline{r} \mid \underline{r}', \omega) $
+corresponds to a dipole. To implement a wave field synthesis system in a loudspeaker array, we replace the continuous monopole and dipole distributions on \( \partial \mathcal{V} \) (the boundary surface) with \textbf{suitable type of loudspeakers} and each loudspeaker is driven by the corresponding signals
+$
+p(\underline{r}', \omega) \quad \text{and} \quad \frac{\partial}{\partial \underline{n}'} p(\underline{r}', \omega).$
+
+% Slide 9
+By specifying the pressure and its normal derivative on \( \partial\mathcal{V} \), the Kirchhoff–Helmholtz integral ensures that the target \textbf{sound field inside \( \mathcal{V} \) is exactly reproduced}.  
+However, in practice, loudspeaker arrays can only approximate these continuous boundary conditions.
+
+\begin{table}[H]
+  \centering
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.2} % optional: adjust vertical spacing
+
+  % add a vertical line in the middle
+  \begin{tabular}{@{}
+      >{\centering\arraybackslash}p{0.45\linewidth}
+      | % vertical line
+      >{\centering\arraybackslash}p{0.45\linewidth}
+    @{}}
+    \toprule
+    \textbf{Problem} & \textbf{Solution} \\
+    \midrule
+    Two kinds of sources at the boundary: monopoles and dipoles
+      & Elimination of the dipoles \\[1ex]
+
+    Generation of sound signals on the whole surface
+      & Distribution of point sources only on a closed curve on the horizontal plane \\[1ex]
+
+    Generation of a continuous source distribution
+      & Discrete sources (loudspeakers) \\[1ex]
+
+    Determination of the loudspeaker signals
+      & Evaluation of acoustic source models \\
+    \bottomrule
+  \end{tabular}
+  \caption{Comparison of original problems and their corresponding solutions}
+\end{table}
+
+
+% Slide 10
+\subsubsection{Elimination of Dipoles}
+\textbf{To avoid the contribution of dipole sources in the synthesized sound field}, one can use a \textbf{modified Green's function} that satisfies a \textit{homogeneous Neumann boundary condition}:
+\[
+\left. \frac{\partial}{\partial \underline{n}} G(\underline{r}|\underline{r}', \omega) \right|_{\underline{r}' \in \partial V} = 0
+\]
+This approach eliminates the directional (dipole-like) components, resulting in a purely monopole-based field that is easier to reproduce with loudspeakers and yields a more uniform sound field inside the region.
+
+This condition ensures that the \textbf{boundary $\partial V$ is modelled as a perfectly rigid surface}. The modified Green's function $G_N(\underline{r}|\underline{r}', \omega)$ is derived by adding a suitable homogeneous solution to the free-field Green's function $G_0(\underline{r}|\underline{r}', \omega)$. The explicit form of this additional term depends on the specific geometry of $\partial V$.
+
+In the case of \textbf{linear or planar geometries}, the desired Neumann Green's function can be written explicitly as:
+\[
+G_N(\underline{r}|\underline{r}', \omega) = 2 G_0(\underline{r}|\underline{r}', \omega)
+, \qquad
+G_0(\underline{r}|\underline{r'},\omega) = \frac{e^{-j\frac{\omega}{c}||\underline{r}-\underline{r'}||}}{4\pi||\underline{r}-\underline{r'}||}
+\]
+
+% Slide 11
+By \textbf{extending the monopole-only formulation to boundaries of arbitrary shape}, we eliminate the need for dipole sources, while still making use of the Kirchhoff--Helmholtz integral framework.  
+In this approach, we acknowledge that the sound field outside the listening region \(\underline{r} \in \mathcal{V}\) will generally be non-zero.  
+To ensure that external sound does not re-enter the listening region, we select a convex boundary \(\partial \mathcal{V}\).  
+As a result, the reproduced sound field inside \(\mathcal{V}\) becomes a combination of the desired target field and minor reflections due to the treatment of the boundary as a rigid, monopole-only surface.  
+This trade-off enables a feasible implementation of the loudspeaker array, even though it introduces slight deviations from perfect field reconstruction.
+
+
+
+%slide12
+A key difficulty in reproducing accurate sound fields is that some secondary sources radiate sound in \textbf{directions that do not match the normal vector} \(\mathbf{\hat{n}}\).  
+When the local propagation direction is not aligned with this normal, these secondary sources introduce errors in the synthesized sound field.  
+A practical way to improve accuracy is to reduce or completely mute the contributions of these misaligned sources.
+
+The reproduced sound field $p(\mathbf{r}, \omega)$ is described by:
+\[
+p(\underline{r}, \omega) = - \oint_{\partial V} D(\underline{r}', \omega) G_0(\underline{r}|\underline{r}', \omega) \  dS_0(\underline{r}')
+\]
+where \(D(\underline{r}', \omega)\) is the driving function for the secondary sources.  
+This \textbf{driving function} determines how much each secondary source should emit to reproduce the desired sound field.  
+It can be written as:
+\[
+D(\underline{r}', \omega) = 2 a(\underline{r}') \frac{\partial}{\partial \underline{\hat{n}}} p(\underline{r}', \omega)
+\]
+The term $a(\underline{r}')$ represents a suitable selection function that varies depending on the position and direction of the virtual source. By adjusting this function $a(\underline{r}')$, it is possible to control the activation of secondary sources and thereby reduce the unwanted reflections that might otherwise distort the desired sound field.
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Green's Function vs. Driving Function}]
+\textbf{Green's Function:}  
+Describes how sound waves propagate from a point source to any other point in space or on a plane.  
+It characterizes the response of the environment to a single source.
+
+\textbf{Driving Function:}  
+Specifies how each loudspeaker (secondary source) must be driven in amplitude and phase to recreate the desired sound field.  
+It ensures that the combined output of all loudspeakers accurately reconstructs the intended field.
+\end{tcolorbox}
+
+
+% Slide 13
+The \textbf{acoustic pressure of a monochromatic plane wave} (wave with only one frequency) with propagation vector \(\underline{k}_{0}\) is given by
+\[
+  p(\underline{r},\omega) = A(\omega)\ e^{\ j\langle \underline{k}_{0},\underline{r}\rangle}.
+\]
+To select which loudspeakers on the boundary \(\partial\mathcal{V}\) should be active, we define the indicator function
+\[
+  a(\underline{r}') =
+  \begin{cases}
+    1, & \text{if }\langle \underline{k}_{0},\ \underline{\hat{n}}(\underline{r}')\rangle > 0,\\
+    0, & \text{otherwise},
+  \end{cases}
+\]
+ 
+%slide14
+Another typical scenario is the \textbf{point source model}, describing the field produced by a monopole source located at position $\underline{z}$:
+\[
+p(\underline{r}, \omega) = A(\omega) \frac{e^{-j \frac{\omega}{c} \|\underline{r} - \underline{z}\|}}{4\pi \|\underline{r} - \underline{z}\|}
+\]
+Here as well, a \textbf{selection function} $a(\underline{r}')$ is used to determine which secondary sources are active:
+\[
+a(\underline{r}') = 
+\begin{cases}
+1 & \text{if } \langle \underline{r}' - \underline{z}, \hat{\underline{n}}(\underline{r}') \rangle > 0 \\
+0 & \text{otherwise}
+\end{cases}
+\]
+These selection functions ensure that only sources radiating energy in the correct spatial direction contribute to the overall field. In this way, both the plane wave and point source models share the principle of controlling the spatial contribution of secondary sources.
+
+\subsection{3D Wave Field Synthesis}
+%slide16
+In \textbf{three-dimensional space, the Green's function} is expressed as:
+\[
+G_{3D}(\underline{r}|\underline{r}', \omega) = \frac{e^{-j \frac{\omega}{c} \|\underline{r} - \underline{r}'\|}}{4\pi \|\underline{r} - \underline{r}'\|}
+\]
+This Green's function characterizes the secondary sources in the sound field. Specifically, $G_{3D}(\underline{r}|\underline{r}', \omega)$ represents the field of a point source at position $\underline{r}'$ with monopole (omnidirectional) radiation characteristics. 
+
+% Slide 17 
+Three-dimensional Wave Field Synthesis involves enclosing the listening region \(\underline{r}\in\mathcal{V}\)  
+with a continuous arrangement of secondary point sources placed along its boundary \(\partial\mathcal{V}\).  
+Each of these secondary sources emits sound based on a \textbf{driving function} \(D(\underline{r}',\omega)\),  
+which combines two main components:  
+\begin{itemize}
+  \item the directional gradient of the virtual source’s sound field,
+  \item and a selection function \(a(\underline{r}')\), which activates only the boundary points that effectively contribute to the interior sound field.
+\end{itemize}
+
+The exact form of the driving function \(D(\underline{r}',\omega)\) depends on the chosen virtual source type -   
+such as a plane wave, point source, or line source - and also on the shape of the loudspeaker array or reproduction contour.  
+
+For the \textbf{plane wave virtual field}, the driving function in the frequency domain is expressed as
+\[
+D_{pw,3D}(\underline{r}', \omega) = 2 a(\underline{r}') j \omega A(\omega) \frac{\langle \underline{\hat{k}}_0, \underline{\hat{n}}(\underline{r}') \rangle}{c} e^{j \langle \underline{k}_0, \underline{r}' \rangle}
+\]
+The inverse Fourier transform leads to the time-domain driving function
+\[
+d_{pw,3D}(\underline{r}', t) = 2 a(\underline{r}') \frac{\langle \underline{\hat{k}}_0, \underline{\hat{n}}(\underline{r}') \rangle}{c} \frac{\partial}{\partial t} A \left( t - \frac{\langle \underline{k}_0, \underline{r}' \rangle}{c} \right)
+\]
+This formulation enables efficient computation in the time domain, since the derivative of the delayed source signal can be performed by filtering the signal with a $j\omega$-characteristic. 
+
+% Slide 19 
+The frequency‐domain driving function for a \textbf{point‐source virtual field} is
+\[
+  D_{\mathrm{ps},3D}\!\left(\underline{r}',\omega\right)
+    = -2\ a\!\left(\underline{r}'\right)
+      \frac{\left\langle \underline{r}' - \underline{z},\ \underline{\hat n}\!\left(\underline{r}'\right)\right\rangle}
+           {\|\underline{r}' - \underline{z}\|^2}
+      \left(\frac{1}{\|\underline{r}' - \underline{z}\|} + \frac{j\omega}{c}\right)
+      A\!\left(\omega\right)\ e^{-\ j\frac{\omega}{c}\|\underline{r}' - \underline{z}\|}
+\]
+
+In the time domain, the corresponding expression becomes
+\[
+  d_{\mathrm{ps},3D}\!\left(\underline{r}',t\right)
+    = -2\ a\!\left(\underline{r}'\right)
+      \frac{\left\langle \underline{r}' - \underline{z},\ \underline{\hat n}\!\left(\underline{r}'\right)\right\rangle}
+           {\|\underline{r}' - \underline{z}\|^2}
+      \left(\frac{1}{\|\underline{r}' - \underline{z}\|} + \frac{1}{c}\ \frac{\partial}{\partial t}\right)
+      A\!\!\left(t - \frac{\|\underline{r}' - \underline{z}\|}{c}\right)
+\]
+demonstrating that each loudspeaker’s drive signal is a weighted linear superposition of the delayed source waveform 
+\(\ A\!\!\left(t - \frac{\|\underline{r}' - \underline{z}\|}{c}\right)\)
+and its time derivative.
+
+%slide20
+\subsubsection{Planar Distribution of Secondary Sources-Example}
+
+The surface $\partial \mathcal{V}$ can degenerate into an \textbf{infinite plane}. In this situation, it is assumed that the point sources are distributed across the $xz$ plane. The resulting reproduced sound field can be expressed as
+\[
+p(\underline{r}, \omega) = \iint\limits_{-\infty}^{\infty} D_{3D}(\underline{r}', \omega) G_{3D}(\underline{r}|\underline{r}', \omega) \  dx' \  dz',
+\]
+which corresponds to the \textit{first Rayleigh integral}. However, this approach is only valid in one of the two half volumes that are separated by the secondary source distribution.
+
+% Slide 21
+In real‐world setups of three‐dimensional Wave Field Synthesis,  
+the continuous distribution of sources is replaced by a finite and planar loudspeaker array.  
+Because there are only a limited number of loudspeakers, two main issues arise:  
+\begin{itemize}
+    \item \textbf{Truncation}: Since the array has finite size, the recreated wavefront does not fully cover the space, leading to incomplete reconstruction.
+    \item \textbf{Spatial aliasing}: When the distance between loudspeakers is larger than half of the acoustic wavelength, unwanted interference patterns appear at higher frequencies.
+\end{itemize}
+
+
+% slide 22
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{sec source dist.png}
+    \caption{Sound fields produced by planar secondary source distribution - $f_\text{pw}=500$ Hz and $\underline{\mathrm{n}}_\text{pw}=[0 \ 1 \ 0]^T$ (left), $f_\text{pw}=500$ Hz and $\underline{\mathrm{x}}_S=[0 \ -2 \ 0]^T$ m (right)}
+\end{figure}
+
+\subsection{2D Wave Field Synthesis}
+
+% Slide 24
+In real-world loudspeaker systems, sound fields can typically only be reproduced within a horizontal plane.  
+This means sounds coming from above or below cannot be recreated.  
+To work around this, the 2D Wave Field Synthesis approach uses line sources that emit sound waves propagating only within this plane.  
+The Green’s function for a line source at \(\underline{r}'\) is:
+\[
+G_{2D}(\underline{r}|\underline{r}',\omega) = \frac{j}{4} H_0^{(2)} \left(\frac{\omega}{c} \|\underline{r} - \underline{r}'\| \right),
+\]
+where \(H_0^{(2)}\) describes how these 2D sound waves travel across the plane.
+
+
+% Slide 25
+The \textbf{driving function for a monochromatic plane wave},
+\[
+D_{\mathrm{pw},3D} \left( \underline{r}', \omega \right)
+= 2 a \left( \underline{r}' \right) j \omega A \left( \omega \right)
+\frac{ \langle \underline{k}_{0}, \underline{\hat n} \left( \underline{r}' \right) \rangle }{ c }
+e^{ j \langle \underline{k}_{0}, \underline{r}' \rangle }
+\]
+
+is independent of whether the secondary sources are arranged in 3D space or along a 2D curve. Consequently, the same expression applies both to 3D WFS with discrete monopoles and to 2D WFS using line sources.  
+
+%slide 26
+The \textbf{driving function for a line source virtual field}, assuming the source is located at $\underline{z}$, can be written as:
+\[
+D_{ls,2D}(\underline{r}', \omega) = \frac{1}{2c} a(\underline{r}') \frac{\langle \underline{r}' - \underline{z}, \hat{\underline{n}}(\underline{r}') \rangle}{\|\underline{r}' - \underline{z}\|} \times \frac{j\omega}{c} A(\omega) H_1^{(2)} \left( \frac{\omega}{c} \|\underline{r}' - \underline{z}\| \right).
+\]
+Here, $a(\underline{r}')$ is a selection function depending on the secondary source positions, $\hat{\underline{n}}(\underline{r}')$ denotes the normal vector at the secondary source position, $A(\omega)$ is the source spectrum and $H_1^{(2)}$ is the first-order Hankel function of the second kind. 
+
+% slide 27
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{lin dist.png}
+    \caption{Sound fields produced by linear distribution of line sources - $f_\text{pw}=500$ Hz and $\underline{\mathrm{n}}_\text{pw}=[0 \ 1]^T$ (left), $f_\text{pw}=500$ Hz and $\underline{\mathrm{x}}_S=[0 \ -2]^T$ m (right)}
+\end{figure}
+
+\subsection{2.5D Wave Field Synthesis}
+In reality, loudspeakers act more like three-dimensional point sources rather than ideal two-dimensional line sources.  
+This creates a difference between the 2D Green’s function and the actual sound propagation that we measure.  
+To address this, we use the large-argument asymptotic expansion of the Hankel function.  
+This approximation allows the 2D Green’s function to be expressed as:
+\[
+ G_{2D}(\underline{r}|\underline{r}', \omega)
+ \approx
+ \sqrt{\frac{2\pi \|\underline{r} - \underline{r}'\|}{j \omega / c}}
+ G(\underline{r}|\underline{r}', \omega)
+\]
+This expression means that each loudspeaker can be driven with the standard 3D Green’s function for a point source.  
+The additional prefactor depends on the listeners position r.  
+To maintain uniform sound levels in the listening area, all driving signals are adjusted using a reference point \(\underline{r}_0\).
+
+
+%slide 30
+In general,  \textbf{the corrected driving function in 2.5D }reproduction scenarios is expressed as:
+\[
+D_{2.5D}(\underline{r}', \omega) = \sqrt{\frac{1}{j\omega/c} \cdot 2\pi \|\underline{r}_0 - \underline{r}'\|} \  D_{3D}(\underline{r}', \omega),
+\]
+The square root term adjusts for the fact that in 2.5D scenarios, point sources are used as secondary sources, thus requiring a correction to the magnitude of the driving function to compensate for the mismatch between the planar reproduction and the full 3D propagation. 
+
+% Slide 31
+
+The frequency‐domain driving function for two‐and‐a‐half‐dimensional WFS is:
+\[
+D _ { pw , 2.5 D } \left( \underline { r } ' , \omega \right)
+=
+2 \; a \left( \underline { r } ' \right)
+\sqrt { 2 \pi \left\| \underline { r } _ 0 - \underline { r } ' \right\| }
+\sqrt { \frac { j \omega } { c } }
+A \left( \omega \right)
+\langle \underline { k } _ 0 , \underline { \hat n } \left( \underline { r } ' \right) \rangle
+e ^ { j \langle \underline { k } _ 0 , \underline { r } ' \rangle }
+\]
+
+In the time domain, the driving signal becomes:
+\[
+d _ { pw , 2.5 D } \left( \underline { r } ' , t \right)
+=
+w _ { pw }
+\delta \left( t - \frac { \langle \underline { k } _ 0 , \underline { r } ' \rangle } { c } \right)
+* \left( f _ { pw } \left( t \right) * A \left( t \right) \right)
+\]
+where:
+\[
+w _ { pw }
+=
+2 \; a \left( \underline { r } ' \right)
+\sqrt { 2 \pi \left\| \underline { r } _ 0 - \underline { r } ' \right\| }
+\langle \underline { k } _ 0 , \underline { \hat n } \left( \underline { r } ' \right) \rangle
+,
+\quad
+f _ { pw } \left( t \right)
+=
+\mathcal { F } ^ { -1 } \left\{ \sqrt { \frac { j \omega } { c } } \right\}
+\]
+
+
+%slide 32
+
+The \textbf{driving function for the point source virtual field in 2.5D} scenarios is expressed as
+\[
+D_{ps,2.5D}(\underline{r}', \omega) = -2 a(\underline{r}') \frac{\langle \underline{r}' - \underline{z}, \hat{\underline{n}}(\underline{r}') \rangle}{\|\underline{r}' - \underline{z}\|} \sqrt{2\pi \|\underline{r}_0 - \underline{r}'\|} 
+\left( \frac{1}{\sqrt{j \omega / c} \|\underline{r}' - \underline{z}\|} + \sqrt{\frac{j \omega}{c}} \right) A(\omega) e^{-j \frac{\omega}{c} \|\underline{r}' - \underline{z}\|}.
+\]
+In the time domain, the corresponding driving function becomes
+\[
+d_{ps,2.5D}(\underline{r}', t) = w_{ps} \delta \left( t - \frac{\|\underline{r}' - \underline{z}\|}{c} \right) * \left( f_{ps}(t) * A(t) \right),
+\]
+where the weighting factor is
+\[
+w_{ps} = 2 a(\underline{r}') \frac{\langle \underline{r}' - \underline{z}, \hat{\underline{n}}(\underline{r}') \rangle}{\|\underline{r}' - \underline{z}\|} \sqrt{2\pi \|\underline{r}_0 - \underline{r}'\|},
+\]
+and the time-domain filter $f_{pw}(t)$ is defined as
+\[
+f_{pw}(t) = \mathcal{F}_t^{-1} \left\{ \frac{1}{\sqrt{j \omega / c} \|\underline{r}' - \underline{z}\|} + \sqrt{\frac{j \omega}{c}} \right\}.
+\]
+
+% slide 33
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{circ dist.png}
+    \caption{Sound fields produced by circular distribution of point sources - $f_\text{pw}=500$ Hz and $\underline{\mathrm{n}}_\text{pw}=[0 \ 1]^T$ (left), $f_\text{pw}=500$ Hz and $\underline{\mathrm{x}}_S=[0 \ -2]^T$ m (right)}
+\end{figure}
+
+%slide 34
+\subsubsection{Linear distribution of secondary point sources-Example}
+
+When the 2D contour \(\partial \mathcal{V}\) collapses into an \textbf{infinite line} - for example, along the \(x\)-axis -   
+the secondary sources are distributed continuously along this line.  
+In this setup, the reproduced sound field can be calculated as:
+\[
+p(\underline{r}, \omega) = - \int_{-\infty}^{\infty} D_{2.5D}(\underline{r}', \omega) G_{3D}(\underline{r}|\underline{r}', \omega) \  dx'.
+\]
+Here, the \textbf{driving function} \(D_{2.5D}\) specifies how much each secondary source along the line should emit,  
+and \(G_{3D}\) represents how sound from each point source \(\underline{r}'\) propagates to the observation point \(\underline{r}\).  
+
+
+% Slide 35
+To ensure a unique and physically consistent sound‐field reconstruction, we impose symmetry about the horizontal $x$-axis. For a plane‐wave virtual source, we only allow incidence angles \(\phi_{0}\) in the range \(\pi<\phi_{0}<2\pi\), corresponding to waves arriving from below the axis. Likewise, for a point‐source virtual field, the source position \(\underline{z}\) must lie below the $x$–axis. Under these geometric constraints, every secondary loudspeaker contributes constructively and no explicit selection function is required.
+
+% slide 36
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{lin dist point.png}
+    \caption{Sound fields produced by linear distribution of point sources - $f_\text{pw}=500$ Hz and $\underline{\mathrm{n}}_\text{pw}=[0 \ 1]^T$ (left), $f_\text{pw}=500$ Hz and $\underline{\mathrm{x}}_S=[0 \ -2]^T$ m (right)}
+\end{figure}
+
+\subsection{Artifacts of Wave Field Synthesis}
+% slide 38
+When the continuous distribution of secondary sources is spatially sampled,  
+it inevitably leads to the occurrence of \textit{spatial aliasing artifacts}.  
+These artifacts distort the spatial structure of the reproduced sound field and can negatively affect how humans localize virtual sources,  
+as well as cause timbral coloration.  
+A thorough analysis of these artifacts requires assuming a specific geometry for the secondary source distribution.  
+In general, two important factors emerge:  
+spatial aliasing tends to become worse as the virtual source signal’s bandwidth increases,  
+and it also depends strongly on the listener’s position in the reproduction space.
+
+In real-world WFS setups using open loudspeaker contours - such as linear arrays -   
+the \textbf{finite length of the array inevitably truncates the ideal continuous boundary}.  
+This truncation creates two main artifacts:  
+\begin{itemize}
+  \item The area where the reproduced field matches the target field is limited to the vicinity of the array’s center.
+  \item Diffraction effects appear at the array edges, causing unwanted spatial coloration.
+\end{itemize}
+
+A common approach to reduce these issues is to use a \textbf{tapering window} on the loudspeaker signals.  
+This means lowering the volume of the outer secondary sources,  
+which makes the sound field transition more smoothly at the ends of the array.  
+However, this also reduces the area where the reproduced sound field is very close to the target field.
+
+%40
+
+In addition, 2D WFS systems employs point sources (loudspeakers) as secondary sources, creating a mismatch, causing amplitude errors in the reproduced sound field.  
+These systems are designed to recreate the field only in a single plane.  
+As a result, listeners positioned outside of that plane may perceive virtual sources as being too high or too low,  
+even though these positions do not correspond to the intended acoustic scenario.
+
+
+% Slide 41: useless
+
+\subsection{Wave Field Analysis}
+
+% Slide 43
+By the \textbf{reciprocity theorem in acoustics}, the Kirchhoff–Helmholtz integral that underpins Wave Field Synthesis can be inverted to form a \textbf{Wave Field Analysis system}. In such an analysis setup, an array of microphones placed along the boundary \(\partial\mathcal{V}\) measures both acoustic pressure \(p(\underline{r}',\omega)\) and its normal gradient \(\partial p/\partial \underline{n}'\). 
+
+These measurements, subject to the same geometric restrictions required for accurate reproduction, symmetry about the $x$-axis and convex boundary shape, allow the exact reconstruction of any incident sound field within the listening region \(\mathcal{V}\).  
+
+The wave field analysis involves \textbf{recording a multichannel signal using an array of microphones}. This set of recordings provides valuable insights into the temporal and spatial structure of the sound field.
+% slide 44
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{RIR mic array.png}
+    \caption{RIR measured along a microphone array}
+\end{figure}
+
+% Slide 45
+\
+
+Wave‐field analysis with boundary measurements can distinguish between \textbf{direct reflections and diffraction effects} by examining the spatial correlation of responses at neighboring microphones. This high spatial resolution can even reveal information about room geometry and surface discontinuities.
+
+In practical microphone arrays, we typically use omnidirectional microphones that measure only the acoustic pressure.  
+Because they do not capture directional gradients, we cannot analyze wavefront differences in the vertical plane.  
+As a result, the analysis is limited to wavefront features in the horizontal plane.
+
+
+%slide 46
+
+
+The responses at any other position in front of the microphone array can be extrapolated by using the Kirchhoff-Helmholtz integral, which has been modified to account only for pressure signals. This method allows the computation of the sound field at the position of the loudspeakers, making it possible to use this extrapolated data directly for accurate reproduction.
+
+\clearpage

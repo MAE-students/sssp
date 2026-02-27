@@ -1,0 +1,245 @@
+\section{Spatial Perception of Auditory Events}
+
+\subsection{Introduction}
+
+\textbf{Sound localization is defined as the ability to identify the spatial origin of a sound} stimulus in terms of direction and distance. The auditory system utilizes several cues for localization, such as interaural differences, spectral information and pattern matching.
+To design an effective sound localization experiment, certain considerations are essential:
+
+\begin{itemize}
+    \item \textbf{Goal:} Measure localization performance in terms of direction only.
+    \item \textbf{Experimental Setup:} Control acoustic conditions using anechoic rooms and address procedural aspects to minimize measurement errors.
+    \item \textbf{Measurement Errors:} These can be categorized into:
+    \begin{itemize}
+        \item Errors due to the measurement setup.
+        \item Errors associated with the subject’s perception.
+    \end{itemize}
+\end{itemize}
+
+A naive approach to localization involves fixed loudspeakers and response clustering. A more accurate solution employs a hidden, movable sound source along with a 3D tracking device to measure head pointing behavior.
+
+Localization errors occur when the perceived direction of a sound source does not match its actual location. These errors can be categorized as follows:
+
+\begin{itemize}
+    \item \textbf{Local Errors:} The perceived direction deviates slightly from the actual location, typically by approximately \( 20^\circ \). The sound source is correctly identified as being in the correct hemisphere, but the angle is slightly off.
+    
+    \item \textbf{Front-Back Localization Errors:} The azimuthal angle (left-right position) is correctly identified, but the listener mistakenly perceives the sound as coming from the opposite hemisphere  -  in other words, a sound in front may be perceived as coming from behind, or vice versa.
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{loc errors.png}
+    \caption{Localization errors}
+\end{figure}
+\subsection{Interaural Differences: ILD and ITD}
+
+Sound localization is significantly influenced by two primary auditory cues: Interaural Level Difference (ILD) and Interaural Time Difference (ITD). 
+
+\textbf{ILD} results from the \textbf{acoustic attenuation caused by the head}, creating intensity differences between the two ears. This effect varies with azimuthal angle: relative angle between the listener and the sound source. HOwever, the relationship between azimuth angle - ILD is irregular and frequency-dependent, not a simple "bigger angle" then "Bigger ILD". Sound originating from one side is strongly attenuated at the far ear, whereas frontal sounds arrive with similar intensity at both ears. ILD varies with frequency because of the relationship between head size and wavelength. The ILD effect is more pronounced at higher frequencies, ranging from less than 2 dB at 200 Hz to over 20 dB above 6 kHz. Despite these variations, ILD is particularly relevant for mid to high frequencies (above 700Hz).
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{ILD.png}
+    \caption{Interaural Level Difference}
+\end{figure}
+\textbf{ITD} represents the \textbf{temporal disparity between the arrival of a sound wave at each ear}, due to the different path lengths traveled. Frontal sources produce minimal ITD, close to \(0 \  \mu s\), while lateral sources can create maximum ITD values of up to approximately \(600 \  \mu s\). ITD is most effective for low frequencies, especially those below 1.5 kHz.
+
+
+% slide 14
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.38\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{ITD.png}
+        \caption{Interaural Time Difference}
+    \end{minipage}
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{duplex.png}
+        \caption{ITD and ILD}
+    \end{minipage}
+\end{figure}
+\subsection{Cones of Confusion}
+
+Interaural Time Differences (ITD) and Interaural Level Differences (ILD) alone are \textbf{insufficient to uniquely identify the exact location of a sound source}.  
+
+Sounds originating from the median plane (directly in front, behind, above, or below the listener) reach both ears with nearly identical ITD and ILD values, creating ambiguity in localization. It might also happen that multiple potential sound source locations can produce the same ITD and ILD, resulting in a \textbf{cone of confusion}  -  a set of positions that are symmetric around the interaural axis and generate the same binaural cues.
+
+This phenomenon can cause the auditory system to \textbf{misinterpret the true direction} of the sound, confusing front-back and up-down positions. To resolve these ambiguities, the auditory system relies on additional spatial cues, such as spectral filtering by the outer ear (pinna), head movements and reflections from surrounding surfaces, which provide more precise localization information.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\linewidth]{confusion cone.png}
+    \caption{Example of cone of confusion}
+\end{figure}
+
+\subsection{Head Movement and Disambiguation}
+
+Head movements play a critical role in \textbf{distinguish sound sources lying in a cone of confusion}. By rotating the head in the azimuthal plane, the interaural time differences (ITD) and interaural level differences (ILD) vary in distinct ways for front and back sources. This variation assists in disambiguating sound sources that would otherwise be indistinguishable based solely on static cues. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.22\linewidth]{monaural 1.png}
+    \includegraphics[width=0.3\linewidth]{monaural 2.png}
+    \caption{Monaural spectral cues - scenario schematic (left) and sound levels (right)}
+\end{figure}
+
+\subsection{ Monaural Spectral Cue}
+When pure tones are played from the ear canal, listeners often misperceive their elevation, depending on frequency. Low tones (1 kHz) tend to be hear from behind, mid frequencies (2-4 kHz) from the front, higher than 8Khz from overhead, very high 12 kHz from the front again.
+This phenomenon arise because the sound spectrum reaching the eardrum is modified by the filtering effects of the head, torso and pinnae, producing frequency-dependent cues that the auditory system misinterprets as changes in elevation. These cues help resolving direction in cone of confusion of ITD and ILD.
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Sound Localization and Spectral Cues}]
+\textbf{Interaural Level Difference (ILD):} Caused by head shadowing, varies with azimuth and frequency. \\
+- \( < 2 \  \text{dB} \) at \( 200 \  \text{Hz} \), \( > 20 \  \text{dB} \) above \( 6 \  \text{kHz} \). \\
+- Most relevant for \( > 700 \  \text{Hz} \).
+
+\medskip
+\textbf{Interaural Time Difference (ITD):} Delay in sound arrival between ears. \\
+- Max \( 600 \  \mu s \) for lateral sources, \( 0 \  \mu s \) for frontal. \\
+- Effective for \( < 1.5 \  \text{kHz} \).
+
+\medskip
+\textbf{Monaural Spectral Cues:} Frequency-dependent elevation cues, i.e. \( 1 \  \text{kHz} \) (rear), \( 2-4 \  \text{kHz} \) (front), \( 8 \  \text{kHz} \) (overhead). Less robust than ITD/ILD and subject to listener variability.
+\end{tcolorbox}
+\subsection{Auditory Cues in Reverberant Environments}
+
+In free-field conditions, interaural and spectral cues remain relatively constant. In reverberant spaces, however, these cues evolve over time as echoes with the duration of the sound and reverberation interact with the direct sound. The onset of a sound may carry different localization cues compared to its later reflections, affecting spatial perception. 
+
+The perceived direction of a sound source is primarily determined by the \textbf{first wavefront} that reaches the ears. Early reflections, which arrive shortly after the direct sound, have little impact on the perceived direction. This phenomenon is known as the \textit{precedence effect}, where the brain prioritizes the first sound impulse to determine the location of the source.  
+This effect is fundamental to \textbf{stereo panning techniques}, where slight timing differences between left and right channels are used to create the perception of a specific sound direction.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{precedence.png}
+    \caption{Precedence effect}
+\end{figure}
+\subsection{Distance Perception}
+
+In open, free-field conditions, estimating the distance of a sound source is generally \textbf{inaccurate}. The only major cue available is the loudness of the sound, where louder sounds are perceived as closer and quieter sounds as more distant. However, this cue can be misleading, as a distant loud sound may appear similar to a nearby quiet sound.
+
+In enclosed spaces, additional cues become available that improve distance perception. The \textbf{ratio of direct to reverberant sound} serves as a significant indicator: a higher proportion of reverberation suggests a more distant source. 
+
+Reverberation also affects the signals reaching each ear, causing them to become less similar or \textit{decorrelated}. This decorrelation provides further distance information, as sounds that are more decorrelated are typically perceived as being farther away.
+Moreover, differences in timbre between the direct and reverberant sound provide another cue.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{distance perception.png}
+    \includegraphics[width=0.3\linewidth]{distance perception 2.png}
+    \caption{Distance perception}
+\end{figure}
+
+\subsection{Head-Related Transfer Function}
+
+At typical listening sound pressure levels, \textbf{acoustic propagation processes can be considered linear and time-invariant}. Under these assumptions, the \textbf{theory of linear systems can be applied}. Consequently, the interaction between sound and the listener’s body - including the pinnae, head, torso and ear canal - can be modelled as a transfer function from the source to the ear.
+
+This transfer function is known as the \textbf{Head-Related Transfer Function (HRTF)}. It characterizes the acoustic system composed of a \textit{far-field sound source, the listener’s body and a receiver placed} at the entrance of the ear canal. The HRTF is formally defined as:
+\[
+\text{HRTF} = \frac{\mathcal{F}\{\text{sound pressure at ear}\}}{\mathcal{F}\{\text{sound pressure reference}\}}
+\]
+Here, $\mathcal{F}$ denotes the Fourier transform. 
+The reference sound pressure can be defined in multiple ways. One common definition is the pressure that would be measured at the center of the listener’s head, assuming the listener is not present. This serves as a baseline for comparing how the presence of the head and body affects the sound field.
+ 
+
+It is important to note that \textbf{the HRTF remains independent of the test range }(the distance from the source) \textbf{only if the sound source is in the far field}. The inverse Fourier transform of the HRTF yields the \textbf{Head-Related Impulse Response (HRIR)}, which represents the time-domain equivalent of the spatial filtering effects introduced by the listener’s anatomy.
+From the pictures below, we can notice that in HRTF we have a valley at 1.5 kHz (this frequency is related to the shape of our head). After that, we see a peak at 3 kHz (frequency related to the size of our pinna).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{single direction.png}
+    \caption{HRIR (top) and HRTF (bottom) - two subjects and single direction}
+\end{figure}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.42\linewidth]{azimuth.png}
+    \includegraphics[width=0.42\linewidth]{azimuth 2.png}
+    \caption{HRIR and HRTF - one subject, azimuth (left) and elevation dependence (right)}
+\end{figure}
+
+\subsubsection{HRTF Measurement and Estimation}
+
+\textit{The Head-Related Transfer Function (HRTF) characterizes how sound from a given direction is filtered by the anatomy of the listener before reaching the eardrums}. \textbf{To measure it, small microphones are inserted into the subject's ears and a stimulus with a known spectrum}---such as pseudo-random noise, Golay sequences, or sine sweeps---\textbf{is played through a loudspeaker positioned at a specific azimuth and elevation}.
+
+The recorded signal represent the overall impulse response of the complete system, which includes not only the listener HRTF but also the transfer function of the measurement apparaturs (loudspeaker, microphone, etc.)}. Hence, a system identification process is required to isolate the listener's response (HRTF).
+
+Let $s(t)$ be the stimulus signal and $c(t)$ the impulse response of the measurement apparatus. The HRIRs for the left and right ears are denoted by $h_l(t)$ and $h_r(t)$ respectively, while $m_l(t)$ and $m_r(t)$ are the recorded microphone signals. In the time domain:
+\[
+    m_l(t) = s(t) * c(t) * h_l(t), \quad
+    m_r(t) = s(t) * c(t) * h_r(t)
+\]
+In the frequency domain:
+\[
+    M_l(\omega) = S(\omega) C(\omega) H_l(\omega), \quad
+    M_r(\omega) = S(\omega) C(\omega) H_r(\omega)
+\]
+Before isolating $H_l(\omega)$ and $H_r(\omega)$, we estimate $|C(\omega)|$ in a preliminary measurement session without the listener. This allows for correction of the measurement system.
+Then the \textit{HRTF magnitude for each ear} is computed as:
+\[
+    |H_l(\omega)| = \frac{|M_l(\omega)|}{|S(\omega)||C(\omega)|}, \quad
+    |H_r(\omega)| = \frac{|M_r(\omega)|}{|S(\omega)||C(\omega)|}
+\]
+\textit{The phase} is derived by subtracting the phases of the stimulus and apparatus:
+\[
+    \angle H_l(\omega) = \angle M_l(\omega) - \angle S(\omega) - \angle C(\omega),
+\qquad
+    \angle H_r(\omega) = \angle M_r(\omega) - \angle S(\omega) - \angle C(\omega)
+\]
+The \textit{full complex HRTFs} are thus:
+\[
+    H_l(\omega) = |H_l(\omega)| e^{j \angle H_l(\omega)}, \quad
+    H_r(\omega) = |H_r(\omega)| e^{j \angle H_r(\omega)}
+\]
+Finally, the Head-Related Impulse Responses (HRIRs) are recovered via inverse Fourier transform:
+\[
+    h_l(t) = \mathcal{F}^{-1}\{H_l(\omega)\}, \quad
+    h_r(t) = \mathcal{F}^{-1}\{H_r(\omega)\}
+\]
+A more robust estimations of HRTF is based on a minimum phase model of the transfer funciton combined with an all-pass filter dependent on an estimated ITD.
+\subsubsection{The CIPIC HRTF Database}
+
+An important resource for HRTF measurement and research is the \textbf{CIPIC HRTF database}, developed at the University of California. This database includes HRTF measurements from 45 subjects. For each subject, HRTFs were recorded from 1250 different directions for both ears.
+
+The experimental setup involved seating the subject at the center of a radius hoop, with the subject's head position monitored. Loudspeakers were arranged at various azimuths and elevations along the hoop and used to emit test signals.
+Microphones were inserted into the subject's ear canals to capture the binaural responses. To ensure accuracy, the recorded signals were windowed to eliminate room reflections. 
+Furthermore, the database includes anthropometric measurements of the subjects, providing valuable data for personalized HRTF modelling and analysis.
+
+% slide 44-45-46
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{CIPIC.png}
+    \includegraphics[width=0.3\linewidth]{CIPIC 2.png}
+    \includegraphics[width=0.2\linewidth]{CIPIC 3.png}
+    \caption{Locations of data points in CIPIC database (left), CIPIC measurements structure (center) and CIPIC probe microphones (right)}
+\end{figure}
+\subsubsection{HRTF Mathematical Models}
+
+To reduce redundancy and enable compact representations, \textit{HRTFs are often modelled using alternative basis expansions}. A common approach is to apply \textbf{Principal Component Analysis (PCA) or related techniques (SVD, KL)}, extracting the dominant components across measurements. Another method involves expanding the HRTF \textit{in spherical harmonics}, leveraging the natural geometry of directional data. These models are useful for interpolation, compression and personalization.
+
+% slide 48
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{HRTF approx.png}
+    \caption{HRTF approximation with spherical harmonics}
+\end{figure}
+
+Another approach to HRTF modelling is based on \textbf{anatomical geometry}. Optical imaging techniques are used to extract detailed geometrical features of the pinna, head and torso. These geometries are then employed as boundary conditions in numerical solvers of the wave equation, allowing accurate simulation of acoustic wave propagation and personalized HRTF estimation.
+
+\subsubsection{The SYMARE Database and Simulation Techniques}
+
+Another relevant dataset is the SYMARE database, which combines acoustic HRIR measurements with MRI-based geometry. HRIRs are recorded in anechoic chambers using microphones at the ear canal entrance. 
+
+These scans are often used to derive the geometry of the head, pinna and torso from optical or MRI data, which can serve as boundary conditions in numerical solvers of the wave equation. A notable method is the Fast Multipole Boundary Element Method, which simulates HRIRs by placing a source at the ear canal and evaluating the acoustic field at a grid of receivers on a surrounding sphere. 
+
+Despite the accuracy of current techniques, both HRIR measurement and MRI scanning remain expensive and impractical for consumer applications. This raises the question of whether it is possible to obtain personalized HRTFs using low-cost hardware. Preliminary studies using LeapMotion and Kinect show promising results, opening avenues for more accessible spatial audio personalization.
+
+% slide 52
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.33\linewidth]{mri.png}
+    \includegraphics[width=0.3\linewidth]{symare.png}
+    \caption{Scanner Philips 3T Achieva MRI (left) and ear surface meshes for 6 subjects (right)}
+\end{figure}
+
+\clearpage

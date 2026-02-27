@@ -1,0 +1,526 @@
+\section{Spatial Sound with Loudspeakers: Ambisonics}
+\subsection{Introduction}
+% Slide 4
+Arbitrary-order Ambisonics - also known as “mode-matching” methods - extend basic panning by using all loudspeakers in the array, not just those closest to the intended direction.  
+The \textbf{sound field is described by a set of basis-function coefficients}, independent from the microphone array used for recording and the loudspeaker setup used for playback.
+
+% Slide 5
+We start with the two-dimensional case, where the sound field is expanded using circular (cylindrical) harmonics on a horizontal plane.  
+In this setup, both listeners and loudspeakers lie on the same plane and loudspeakers are modelled as line sources.  
+Under far-field conditions, these line sources behave like plane waves.  
+However, real loudspeakers act more like point sources and this mismatch between the model and reality can cause changes in amplitude and spatial artifacts.
+
+Then we extend the concept to 3D by modelling loudspeakers as point sources and representing the sound field using spherical harmonics.  
+This keeps the same mode-matching strategy, now applied in three dimensions.
+
+
+\subsection{2D Case}
+% Slide 7
+Arbitrary order 2D ambisonics methods can be applied using whichever planar microphone array geometry in the analysis phase and whichever planar loudspeaker array geometry in the rendering phase. The geometry of the microphone array can be different from the loudspeaker array geometry.
+% Slide 8
+For the sake of simplicity, but without loss of generality, we make the following assumptions: 
+\begin{itemize}
+    \item we consider a distribution of loudspeakers and a listener on the $xy$ plane
+    \item we assume that the loudspeakers are placed on a circle of radius $R$ on the $xy$ plane
+    \item we are interested in representing the sound field in a circular area, defined as the listening area, inside the circle of loudspeakers
+    \item the radial coordinate of points inside this listening area satisfies the condition $r < R$
+\end{itemize}
+
+% Slide 9
+The internal sound field can be represented in terms of \textbf{circular harmonics}, leading to an expansion:
+\[
+p(\underline{r}, \omega) = \sum_{m=-\infty}^{\infty} C_m(\omega) J_m\left(\frac{\omega}{c} r\right) e^{jm\phi}
+\]
+where \( C_m(\omega) \) are the spectral coefficients, \( J_m \) are the Bessel functions and \((r, \phi)\) represent the polar coordinates in the \( xy \)-plane. 
+Since the series is theoretically infinite, a practical implementation requires truncating it to a maximum order \( M \):
+\[
+p_M(\underline{r}, \omega) = \sum_{m=-M}^{M} C_m(\omega) J_m\left(\frac{\omega}{c} r\right) e^{jm\phi}
+\]
+This truncation corresponds to the maximum spatial resolution achievable with a given microphone or loudspeaker arrangement and directly depends on the number of sensors or sources used.
+
+% Slide 10
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{bessel.png}
+    \caption{Bessel function of the $1$-st kind with $m=0,1,5,10$}
+\end{figure}
+
+% Slide 11
+\subsubsection{Truncation theorem}
+
+The \textbf{error introduced by truncating} the infinite series can be quantified using the following expression for the upper bound of the truncation error:
+\[
+\epsilon_M(\underline{r}) = \frac{|p(\underline{r}, \omega) - p_M(\underline{r}, \omega)|}{2\pi |p(\underline{{0}}, \omega)|} \leq \eta e^{-\alpha},
+\]
+where \(\eta \approx 0.16127\) and \(\alpha \in \mathbb{N}\). The truncation order \( M \) is determined by the relation:
+\[
+M = \left\lceil \frac{er(\omega / c)}{2} \right\rceil.
+\]
+Importantly, the truncation error does \textbf{not exceed 16\% }once \( M \) reaches the critical threshold and the order \( M \) depends on the frequency \(\omega\) and the radius \( r \) of the listening area.
+
+% Slide 12
+For a practical region with radius \( r_\text{max} \), the higher the frequency \(\omega\), the higher the required truncation order \( M \). Assuming a maximum frequency \(\omega_\text{max}\), the truncation order \(\bar{M}\) can be computed as:
+\[
+\bar{M} = \left\lceil e \frac{\omega_\text{max}}{2c} r_\text{max} \right\rceil.
+\]
+This ensures that the truncation error remains below 16\% for all frequencies \(\omega < \omega_\text{max}\) and for all points within the radius \( r_\text{max} \), i.e. $r<r_{max}$.
+
+\subsubsection{Ambisonics and Higher Order Ambisonics}
+
+% Slide 13
+The representation of the internal sound field in terms of circular harmonics provides a framework for accurately describing the spatial distribution of the sound pressure. This approach, using Bessel functions and exponential terms, allows for a precise control of the spatial resolution of the sound field by adjusting the truncation order $M$. The higher the order $M$, the more accurate the representation at the cost of increased computational complexity.
+
+In practical implementations, the order of the circular harmonic expansion is often limited to a low value to balance complexity and performance. The special case $M=1$ corresponds to the \emph{first-order Ambisonics} method, commonly referred to as \emph{Ambisonics}. In this case, only three coefficients are employed:
+\begin{itemize}
+    \item $C_0(\omega)$ for the monopole component
+    \item $C_1(\omega)$, $C_{-1}(\omega)$ for the dipole components along orthogonal directions in the plane
+\end{itemize}
+It is typical to assume $C_1(\omega) = C_{-1}(\omega)$, resulting in a symmetrical model of the sound field with respect to a line on the $xy$ plane. This configuration can be interpreted as capturing a pressure component (monopole) and two orthogonal particle velocity components (two dipoles, one aligned with the $x$-axis and one with the $y$-axis).
+
+
+% For higher-order expansions where $M > 1$, the approach is known as \emph{Higher Order Ambisonics} (HOA). In these cases, more coefficients are included in the representation, enabling a more refined and accurate reproduction of the sound field. However, this comes with increased complexity and requires a larger number of loudspeakers to ensure accurate spatial rendering of the sound field. The trade-off between spatial fidelity and implementation cost is thus a key consideration in the design and deployment of HOA systems.
+
+% Slide 14 
+First-order Ambisonics offers a low-complexity approach requiring only a few loudspeakers. The resulting “sweet spot” - the region where the perceived direction of arrival (DOA) of the virtual source is accurate - grows with the number of loudspeakers, but remains relatively small. Outside this sweet spot, the auditory scene tends to collapse toward the nearest speaker.
+
+Higher-order Ambisonics extends the same mode-matching principle by increasing both the spatial resolution and the size of the sweet spot. As the Ambisonics order increases, more loudspeakers are required , but the listening area with faithful direction encoding expands accordingly. This comes at the cost of greater system complexity and computational load.  
+
+\subsubsection{Desired Sound Field}
+% Slide 16 
+
+The goal is to \textbf{find the coefficients \(C_m(\omega)\)} so that the target sound field \(p_{\text{target}}(\underline{r}, \omega)\)  
+can be approximated using this expression:
+\[
+p_{\text{target}}(\underline{r}, \omega) = \sum_{m = -M}^{M} C_m(\omega) J_m\left( \frac{\omega}{c} r \right) e^{j m \phi}
+\]
+In simple terms, this formula shows that the target sound field can be represented as a sum of circular functions  
+(Bessel functions \(J_m\) and angular exponential terms \(e^{j m \phi}\)) weighted by the coefficients \(C_m(\omega)\).
+
+To determine these coefficients, there are two possible approaches: 
+\begin{itemize}
+  \item \textbf{Model-based scenario:} Using a mathematical model of the target sound field to calculate the coefficients.  
+  \item \textbf{Data-based scenario:} Estimating the coefficients from microphone recordings made in the acoustic environment. When model of the osurce is not avaiable or it is too complex to be used in a practical implementation.
+\end{itemize}
+
+
+% Slide 17
+The \textbf{sound field generated by a plane wave} has unit amplitude and a specified direction of arrival. This direction is defined by the wavevector \( \underline{k}_0 \). The corresponding desired sound field is given by the following expression:
+\[
+p_{\text{target}}(\underline{r}, \omega) = e^{j \langle \underline{k}_0 , \underline{r} \rangle} \quad
+\text{where} \quad
+\underline{k}_0 = \left( \frac{\omega}{c} \right) \begin{bmatrix} \cos(\phi_0) \\ \sin(\phi_0) \end{bmatrix}
+\]
+Where this vector ($\underline{k}_0 $ )describes the direction and magnitude of the incoming wave in Cartesian coordinates.
+
+In polar coordinates, the inner product between the wavevector \( \underline{k}_0 \) and the position vector \( \underline{r} \) simplifies to:
+\[
+\langle \underline{k}_0 , \underline{r} \rangle = \frac{\omega}{c} r \cos(\phi - \phi_0)
+\]
+
+% Slide 18 
+For a plane wave, the desired sound field can be expressed as:
+\[
+p_{\text{target}}(\underline{r}, \omega) = e^{j \frac{\omega}{c} r \cos(\phi - \phi_0)}
+\]
+
+The exponential term \( e^{j \frac{\omega}{c} r \cos(\phi - \phi_0)} \) is a periodic function of the angular variable \( \phi \) and therefore it can be expanded in a Fourier series. The expansion takes the form:
+\[
+e^{j \frac{\omega}{c} r \cos(\phi - \phi_0)} = \sum_{m = -\infty}^{\infty} B_m(\omega) e^{j m \phi}
+\]
+
+Here, \( B_m(\omega) \) are the coefficients of the Fourier series and they encapsulate the frequency-dependent contribution of each angular harmonic.
+
+% Slide 19 
+
+We begin by recalling the cylindrical harmonics expansion of a general sound field 
+\( p(\underline{r}, \omega) \)
+, which is given by:
+\[
+p(\underline{r}, \omega) = \sum_{m = -\infty}^{\infty} J_m\left( \frac{\omega}{c} r \right) C_m(\omega) e^{j m \phi}
+\]
+
+The target sound field for a plane wave can be written as:
+\[
+p_{\text{target}}(\underline{r}, \omega) = e^{j \langle \underline{k}_0 , \underline{r} \rangle} = \sum_{m = -\infty}^{\infty} j^m J_m\left( \frac{\omega}{c} r \right) e^{j m (\phi - \phi_0)}
+\]
+
+This expansion is known as the \textbf{Jacobi-Anger expansion} for a plane wave.
+To obtain the angular coefficients \( C_m(\omega) \), we perform a mode-by-mode matching of the target sound field \( p_{\text{target}}(\underline{r}, \omega) \) from the equation above with the general cylindrical harmonics expansion \( p(\underline{r}, \omega) \). This yields:
+\[
+C_m(\omega) = j^m e^{-j m \phi_0}
+\]
+
+% Slide 20
+Consider a \textbf{line source} located at position \( \underline{z} \), defined in polar coordinates as \( (z, \phi_z) \), with the condition that \( z > r \). The desired sound field produced by this source is given by:
+\[
+p_{\text{target}}(\underline{r}, \omega) = \frac{j}{4} H_0^{(2)}\left( \frac{\omega}{c} \left\| \underline{r} - \underline{z} \right\| \right)
+\]
+
+To proceed, we apply the addition theorem for the Hankel function (see reference [3], p. 67), which allows us to rewrite the Hankel function of the distance \( \left\| \underline{r} - \underline{z} \right\| \) as:
+\[
+H_0^{(2)}\left( \frac{\omega}{c} \left\| \underline{r} - \underline{z} \right\| \right) = \sum_{m = -\infty}^{\infty} H_m^{(2)}\left( \frac{\omega}{c} z \right) e^{-j m \phi_z} J_m\left( \frac{\omega}{c} r \right) e^{j m \phi}
+\]
+
+By comparing this expression with the general cylindrical harmonics expansion and matching the two mode by mode, the coefficients \( C_m(\omega) \) of the desired sound field can be identified as:
+\[
+C_m(\omega) = \frac{j}{4} H_m^{(2)}\left( \frac{\omega}{c} z \right) e^{-j m \phi_z}
+\]
+
+%already mentioned
+    % Slide 21
+    %\subsubsection{Data-based Scenario}
+    
+    %In some situations, the physical or mathematical model of the source is either unavailable or too complex to be used effectively in a practical implementation. In such cases, during the analysis phase, the coefficients \( C_m(\omega) \) can be estimated directly from the signals captured by a set of microphones. These same coefficients \( C_m(\omega) \) can subsequently be employed during the rendering phase to synthesize or reproduce the desired sound field.
+
+\subsubsection{Reproduced Sound Field}
+% Slide 23
+The \textbf{objective} is to determine the appropriate weights to apply to the loudspeaker driving signals, in order to \textbf{reproduce the desired sound field}.
+\textbf{Model-based rendering} assumes that the desired sound field originates from a known source characterized by a specific model, such as a plane wave or a line source. Several assumptions and configurations can be considered:
+\begin{itemize}
+  \item Under the far-field assumption, loudspeakers are modelled as plane wave sources.
+  \item Without the far-field assumption, loudspeakers are instead modelled as line sources.
+  \item Importantly, the model used for the secondary sources (i.e., the loudspeakers) may differ from the model of the desired source.
+\end{itemize}
+
+\textbf{Data-based rendering} does not rely on a mathematical model of the original source.  
+Instead, the coefficients \( C_m(\omega) \) are estimated directly from microphone recordings taken during the analysis phase.  
+Although no model of the source itself is assumed, specific models of the secondary sources (such as loudspeakers)  
+can still be used to compute the necessary weights for accurately reproducing the sound field through the loudspeaker array.
+
+
+
+% Slide 24
+\subsubsection{Loudspeakers modelled as Plane Waves}
+
+We assume:
+
+\begin{itemize}
+  \item The loudspeakers are positioned sufficiently far from the listener such that the sound field they produce can be approximated as a plane wave.
+  
+  \item The resulting sound field in the \( xy \)-plane can therefore be modelled as a superposition of multiple plane waves.
+  In this context, the planes of constant phase associated with the sound waves are assumed to be orthogonal to the \( xy \)-plane.
+  
+\end{itemize}
+
+% Slide 25
+Regarding the \textbf{model}, we assume the sound field results from \( Q \) loudspeakers, each modelled as a plane wave source. Based on this assumption, the resulting sound field at position \( \underline{r} \) and frequency \( \omega \) is given by:
+\[
+p(\underline{r}, \omega) = \sum_{q = 0}^{Q - 1} d_q(\omega) e^{j \langle \underline{k}_q , \underline{r} \rangle}
+\]
+The goal is to \textbf{determine the loudspeaker weights \( d_q(\omega) \)} such that the synthesized sound field matches the desired target field:
+\[
+p_{\text{target}}(\underline{r}, \omega) = \sum_{q = 0}^{Q - 1} d_q(\omega) e^{j \langle \underline{k}_q , \underline{r} \rangle}
+\]
+This problem can be approached by solving a linear system of equations in order to determine the appropriate coefficients \( d_q(\omega) \).
+
+% Slide 26
+\subsubsection{Loudspeakers modelled as Plane Waves: An Example}
+
+\textbf{Model-based rendering} refers to the reproduction of a plane wave sound field. The target field is defined as:
+\[
+p_{\text{target}}(\underline{r}, \omega) = e^{j \langle \underline{k}_0 , \underline{r} \rangle}
+\]
+
+The objective is to determine the loudspeaker coefficients \( d_q(\omega) \) such that the sum of plane waves emitted by all \( Q \) loudspeakers reproduces the target field:
+\[
+e^{j \langle \underline{k}_0 , \underline{r} \rangle} = \sum_{q = 0}^{Q - 1} d_q(\omega) e^{j \langle \underline{k}_q , \underline{r} \rangle}
+\]
+
+To simplify and analyze this equation, we apply the Jacobi-Anger expansion to both sides. This leads to the following equality:
+\[
+\sum_{m = -\infty}^{\infty} j^m J_m\left( \frac{\omega}{c} r \right) e^{j m (\phi - \phi_0)} 
+= \sum_{q = 0}^{Q - 1} d_q(\omega) \sum_{m = -\infty}^{\infty} j^m J_m\left( \frac{\omega}{c} r \right) e^{j m (\phi - \phi_q)}
+\]
+
+% Slide 27
+To proceed from the previous result, we exchange the order of summation in equation and enforce equality mode by mode.
+In the case of a uniform circular array of \( Q \) loudspeakers, the mode-matching condition becomes:
+\[
+e^{-j m \phi_0} = \sum_{q = 0}^{Q - 1} d_q(\omega) e^{-j m q \frac{2\pi}{Q}}, \quad \forall m \in \mathbb{Z}
+\]
+This corresponds to the discrete Fourier transform (DFT) of the loudspeaker weights \( d_q(\omega) \):
+\[
+e^{-j m \phi_0} = \text{DFT}_Q \{ d_q(\omega) \}
+\]
+Therefore, the weights \( d_q(\omega) \) can be recovered via the inverse DFT:
+\[
+d_q(\omega) = \text{DFT}_Q^{-1} \left\{ e^{-j m \phi_0} \right\} = \frac{\sin\left( Q (\phi_0 - \phi_q)/2 \right)}{Q \sin\left( (\phi_0 - \phi_q)/2 \right)}
+\]
+Finally, the Ambisonics coefficients \( C_m(\omega) \), which represent the signal in the angular spectral domain, are given by:
+\[
+C_m(\omega) = \sum_{q = 0}^{Q - 1} d_q(\omega) j^m e^{-j m \phi_q}
+\]
+% Slide 29
+\subsubsection{Loudspeakers modelled as Line Sources}
+
+We consider a continuous distribution of loudspeakers arranged along a circle of radius \( R \). In this case, ideal line sources are positioned at locations \( \underline{v} = (R, \phi_v) \) in polar coordinates.
+Let \( D(\phi_v, \omega) \) denote the driving function that controls the amplitude and phase of the loudspeaker distribution at angle \( \phi_v \) and frequency \( \omega \).Here, the loudspeakers are modelled as ideal line sources that are orthogonal to the \( xy \)-plane.
+
+Under these assumptions, the reproduced sound field for points inside the circle (i.e., \( r < R \)) is given by the simple source formulation:
+\[
+p(\underline{r}, \omega) = \int_0^{2\pi} D(\phi_v, \omega) \frac{j}{4} H_0^{(2)}\left( \frac{\omega}{c} \left\| \underline{r} - \underline{v} \right\| \right) d\phi_v
+\]
+
+
+% slide 30
+To analyze the sound field produced by the continuous loudspeaker distribution, we apply the addition theorem for cylindrical harmonics. This allows us to express the Hankel function of the distance as:
+\[
+H_0^{(2)}\left( \frac{\omega}{c} \left\| \underline{r} - \underline{v} \right\| \right) = \sum_{m = -\infty}^{\infty} H_m^{(2)}\left( \frac{\omega}{c} R \right) e^{-j m \phi_v} J_m\left( \frac{\omega}{c} r \right) e^{j m \phi}
+\]
+
+Next, we observe that the driving function \( D(\phi_v, \omega) \) is \( 2\pi \)-periodic with respect to the angular variable \( \phi_v \). Therefore, it can be expanded into a Fourier series as:
+\[
+D(\phi_v, \omega) = \sum_{m = -\infty}^{\infty} B_m(\omega) e^{j m \phi_v}
+\]
+% Slide 31
+By substituting the equations of $H_0^{(2)}$ and $D$ into the equation of $p(\underline{r},\omega)$ and evaluating the resulting integral, we obtain an equivalent expression for the reproduced sound field:
+\[
+p(\underline{r}, \omega) = \sum_{m = -\infty}^{\infty} B_m(\omega) \frac{j}{2} \pi H_m^{(2)}\left( \frac{\omega}{c} R \right) J_m\left( \frac{\omega}{c} r \right) e^{j m \phi}
+\]
+This shows that the reproduced sound field is expressed as a weighted sum of cylindrical basis functions:
+\[
+J_m\left( \frac{\omega}{c} r \right) e^{j m \phi}
+\]
+Each mode \( m \) is associated with a corresponding weight given by:
+\[
+C_m(\omega) = B_m(\omega) \frac{j}{2} \pi H_m^{(2)}\left( \frac{\omega}{c} R \right)
+\]
+% Slide 32
+To determine the required driving function, we begin by equating a general desired sound field, expressed using the cylindrical harmonics expansion.
+The coefficients \( C_m(\omega) \) from the cylindrical harmonics expansion are related to the coefficients \( B_m(\omega) \) appearing in the source representation via the following relation:
+\[
+B_m(\omega) = \frac{2}{j \pi H_m^{(2)}\left( \left( \frac{\omega}{c} \right) r \right)} C_m(\omega), \quad m \in \{-M, \ldots, M\}
+\]
+
+Based on this, the continuous driving function \( D(\phi_v, \omega) \) for the loudspeaker distribution can be written as:
+\[
+D(\phi_v, \omega) = \sum_{m = -M}^{M} \frac{2}{j \pi H_m^{(2)}\left( \left( \frac{\omega}{c} \right) r \right)} C_m(\omega) e^{j m \phi_v}
+\]
+
+This corresponds to a summation over \( 2M + 1 \) angular modes.
+
+% Slide 33
+\subsubsection{Loudspeakers modelled as Line Sources: Discrete Distribution}
+
+We transition from a continuous loudspeaker distribution to a \textbf{discrete set of loudspeakers arranged around a circle}.
+The function \( D(\phi_v, \omega) \), which describes the continuous driving function, is periodic with period \( 2\pi \). Its maximum frequency is given by \( \frac{M}{2\pi} \).
+According to the Shannon sampling theorem, in order to accurately represent \( D(\phi_v, \omega) \), we require at least \( 2M + 1 \) equidistant samples around the circle.
+
+Let us now consider a configuration with \( Q \geq 2M + 1 \) loudspeakers, uniformly distributed. The angle increment is:
+\[
+\Delta \phi = \frac{2\pi}{Q}, \quad \phi_q = q \Delta \phi
+\]
+The \( q \)th loudspeaker weight is computed by sampling \( D \) at the corresponding angle and multiplying by \( \Delta \phi \):
+\[
+d_q(\omega) = D(\phi_q, \omega) \Delta \phi
+\]
+Using the Fourier expansion of \( D(\phi_v, \omega) \), we can express the loudspeaker weights as:
+\[
+d_q(\omega) = \sum_{m = -M}^{M} \frac{2}{j \pi H_m^{(2)}\left( \left( \frac{\omega}{c} \right) r \right)} C_m(\omega) e^{j m \phi_q} \Delta \phi, \quad q = 1, \ldots, Q
+\]
+
+% Slide 34
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Remarks}]
+\begin{itemize}
+  \item The driving function depends on the desired sound field coefficients, the loudspeaker positions and the frequency \(\omega\).
+  \item There are no errors for low-order angular harmonics (\(m \in \{-M, \ldots, M\}\)).
+  \item Increasing the maximum frequency \(\omega_{\text{max}}\) requires more loudspeakers \(Q\) to maintain accurate reproduction.
+  \item Ambisonics system design must balance loudspeaker count, region size, frequency range and spatial accuracy.
+\end{itemize}
+\end{tcolorbox}
+
+
+\subsection{3D Case}
+% Slide 37 
+\textbf{Arbitrary-order 3D ambisonics methods} can be implemented using any 3D array configuration. Specifically:
+\begin{itemize}
+  \item Any 3D microphone array geometry can be used during the analysis phase.
+  \item Any 3D loudspeaker array geometry can be used during the rendering phase.
+\end{itemize}
+
+The geometry of the microphone array does not need to match the geometry of the loudspeaker array. These two arrays can have completely different spatial configurations.
+Among the various possible geometries, the most commonly used configuration for both microphones and loudspeakers is the \textbf{spherical array}.
+
+% Slide 41
+For the sake of simplicity and without loss of generality, we adopt the following assumptions regarding the spatial configuration of the system:
+\begin{itemize}
+  \item A distribution of microphones is placed on the surface of a sphere during the recording (analysis) phase.
+  
+  \item A distribution of loudspeakers is arranged on the surface of a sphere of radius \( R \) during the rendering phase.
+  
+  \item The goal is to reproduce the sound field within a spherical region inside the loudspeaker array. This region is referred to as the \textit{listening area}.
+  
+  \item All points within the listening area are assumed to have a radial coordinate \( r \) such that \( r < R \), meaning they lie entirely within the spherical array of loudspeakers.
+\end{itemize}
+
+% Slide 42
+\subsubsection{Representation of the Sound Field}
+
+The \textbf{internal sound field} can be represented using a spherical harmonics expansion. Specifically, the sound pressure field \( p(\underline{r}, \omega) \) can be written as:
+\[
+p(\underline{r}, \omega) = \sum_{n = 0}^{\infty} \sum_{m = -n}^{n} \alpha_{nm}(\omega) j_n\left( \frac{\omega}{c} r \right) Y_n^m\left( \cos(\phi) \right)
+\]
+
+This formulation expresses the sound field as a sum of spherical Bessel functions and spherical harmonics, weighted by frequency-dependent coefficients \( \alpha_{nm}(\omega) \).
+To make the representation practical, the \textbf{expansion is truncated} to a finite order \( N \), yielding:
+\[
+p_N(\underline{r}, \omega) = \sum_{n = 0}^{N} \sum_{m = -n}^{n} \alpha_{nm}(\omega) j_n\left( \frac{\omega}{c} r \right) Y_n^m\left( \cos(\phi) \right)
+\]
+
+% slide 43
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.38\linewidth]{shperical harmonics.png}
+    \caption{Spherical harmonics up to order 3}
+\end{figure}
+% Slide 44
+The \textbf{objective is to determine the coefficients \( \alpha_{nm}(\omega) \)} such that a target sound field \( p_{\text{target}}(\underline{r}, \omega) \) can be approximated by a truncated spherical harmonics expansion:
+\[
+p_{\text{target}}(\underline{r}, \omega) = \sum_{n = 0}^{N} \sum_{m = -n}^{n} \alpha_{nm}(\omega) j_n\left( \frac{\omega}{c} r \right) Y_n^m\left( \cos(\phi) \right)
+\]
+In a \textbf{model-based} scenario, the coefficients \( \alpha_{nm}(\omega) \) are derived analytically based on a model of the desired sound field.
+
+In a \textbf{data-based} scenario, these coefficients are estimated from microphone array recordings of the actual sound field.
+
+% slide 45
+For a \textbf{plane wave }arriving from the direction defined by the angles \( \theta_z \) and \( \phi_z \), the spherical harmonics coefficients are given by:
+\[
+\alpha_{nm}(\omega) = 4 \pi (-j)^m Y_n^{-m}(\theta_z, \phi_z)
+\]
+
+For a \textbf{monopole point source} located at spherical coordinates \( z, \theta_z, \phi_z \), the coefficients become:
+\[
+\alpha_{nm} = -j \frac{\omega}{c} h_n^{(2)}\left( \frac{\omega}{c} z \right) Y_n^m(\theta_z, \phi_z)
+\]
+
+
+% Slide 46
+\subsubsection{Data-based scenario: First-order Ambisonics}
+
+In data-based ambisonics rendering, a special type of microphone is required during the acquisition phase. This is commonly referred to as a \textbf{soundfield microphone}.
+The most widely used representation format is known as the \textbf{B format}, which consists of:
+
+\begin{itemize}
+  \item A pressure signal \( W \), obtained from an omnidirectional microphone.
+  \item A directional signal \( X \), aligned with the \( x \)-axis, typically captured using a figure-of-eight microphone.
+  \item A directional signal \( Y \), aligned with the \( y \)-axis.
+  \item A directional signal \( Z \), aligned with the \( z \)-axis.
+\end{itemize}
+
+% slide 47
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Soundfield mic.png}
+    \caption{Soundfield microphone}
+\end{figure}
+
+
+% Slide 48-49 
+\subsubsection{Data-Based Scenario: Higher-Order Ambisonics (HOA)}
+
+A \textbf{higher-order ambisonic representation} of the recorded sound field can be achieved using an approach that extends the method employed in first-order ambisonics.
+Since higher-order expansions are used, a larger number of spherical harmonics coefficients is required to accurately describe the sound field. The target sound field is then reconstructed by using the expansion coefficients obtained from the captured field.
+In order to estimate these higher-order coefficients, microphones with high-order directivity are necessary. A first-order cardioid response is insufficient. Therefore:
+
+\begin{itemize}
+  \item Microphone arrays must be used to achieve the necessary spatial sampling.
+  \item Spherical microphone arrays are particularly advantageous, as they provide consistent directional response for all angles of incidence.
+ \item Pressure sensors are distributed and mounted on the surface of a sphere, forming a spherical microphone array.
+  
+  \item Specific signal processing techniques are employed to extract and separate the contribution of each spherical harmonic component from the measured signals, enabling independent capture of each mode.
+\end{itemize}
+
+
+% slide 50
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{open mic.png}
+    \caption{Open spherical microphone array at UCL London}
+\end{figure}
+
+% Slide 51
+\subsubsection{Data-Based Scenario: Spherical Harmonics Expansion}
+
+The sound field at a given spatial point \( \underline{r} \) can be represented in terms of spherical harmonics of order \( n \) and degree \( m \) as:
+\[
+p(\underline{r}, \omega) = \sum_{n=0}^{\infty} \sum_{m=-n}^{n} \alpha_{nm}(\omega) j_n\left( \frac{\omega}{c} r \right) Y_n^m(\theta, \phi)
+\]
+
+ The coefficients \( \alpha_{nm}(\omega) \) are spatially invariant; they do not depend on the observation point \( \underline{r} \). If these coefficients can be measured, the entire sound field can be reconstructed with high fidelity.
+Ideally, the harmonic coefficients are computed using the integral:
+\[
+\alpha_{nm}(\omega) = \frac{1}{j_n\left( \frac{\omega}{c} r \right)} \int_0^{2\pi} \int_0^{\pi} p(\underline{r}, \omega) Y_n^{-m}(\theta, \phi) \  d\theta \  d\phi
+\]
+This formula is valid if the point \( \underline{r} \) lies on the surface of a sphere of radius \( r = R \). It also requires that \( j_n\left( \frac{\omega}{c} r \right) \neq 0 \).
+ % Slide 52
+In this scenario, the integral expression for the harmonic coefficients is approximated using a finite summation. To carry out this approximation, we use \( \widetilde{Q} \) omnidirectional microphones uniformly distributed on the surface of a sphere with radius \( R \). These microphones are used to measure the sound field at specific positions, denoted by the spherical coordinates \( (R, \theta_q, \phi_q) \), where \( q = 1, \dots, \widetilde{Q} \).
+
+The spherical harmonic coefficients can then be estimated from these measurements using the following expression:
+\[
+\widehat{\alpha}_{nm}(\omega) = \frac{1}{j_n\left( \frac{\omega}{c} R \right)} \sum_{q=1}^{\widetilde{Q}} p(R, \theta_q, \phi_q, \omega) \  Y_n^{-m}(\theta_q, \phi_q) \  w_q
+\]
+where \( w_q \) are appropriate quadrature weights assigned to each microphone position.
+
+% Slide 53
+\subsubsection{Number of Microphones}
+
+A sound field that is bandlimited to order \( N \) contains \( (N + 1)^2 \) spherical harmonic components. Consequently, it is possible to sample such a sound field using at least \( (N + 1)^2 \) microphones, leading to the condition
+\[
+\widetilde{Q} \geq (N + 1)^2
+\]
+where \( \widetilde{Q} \) is the number of microphones.
+
+When employing an \textbf{equiangular spacing strategy} for microphone placement, the density of microphones increases near the poles. In this configuration, using only \( (N + 1)^2 \) microphones may not be sufficient to achieve accurate reconstruction. Therefore, a more conservative requirement is
+\[
+\widetilde{Q} \geq (2N - 1)^2
+\]
+to ensure sufficient spatial sampling of the sound field. In this context, the quadrature weights assigned to each microphone are uniform and given by \( w_q = \frac{2\pi}{\widetilde{Q}} \).
+
+% slide 54
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{sph Bessel.png}
+    \caption{Spherical Bessel functions of orders 0 to 5}
+\end{figure}
+
+% Slide 55
+In practice, the radius \( R \) of the spherical microphone or loudspeaker array is chosen such that the spherical Bessel functions \( j_n\left(\frac{\omega}{c}R\right) \) are non-zero for all orders \( n = 0, \dots, N \) and for frequencies within the band of interest \( \omega \in [\omega_l, \omega_u] \). This ensures that all harmonic components up to order \( N \) can be reliably captured and reproduced across the entire frequency band:
+\[
+j_n\left(\frac{\omega}{c}R\right) \neq 0 \quad \text{for} \quad n = 0, \dots, N, \; \omega \in [\omega_l, \omega_u]
+\]
+
+It is important to note that spherical Bessel functions exhibit a bandpass behavior for orders \( n > 0 \), which implies that their values are significant only within a certain frequency range. This property must be taken into account when selecting the array radius and designing the system bandwidth.
+
+% Slide 56
+In practical applications, certain limitations of spherical microphone arrays can be mitigated by placing the \textbf{microphones on the surface of a rigid sphere}. This configuration provides two main advantages:
+
+\begin{itemize}
+    \item The acoustic scattering introduced by the rigid body can be modelled analytically, allowing for predictable signal processing and calibration.
+    \item The presence of the rigid sphere causes scattering and diffraction effects, which effectively extend the operational frequency band of the microphone array.
+\end{itemize}
+
+Several commercial devices currently on the market are based on this principle.
+% slide 57
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.14\linewidth]{eigenmike.png}
+    \caption{Eigenmike}
+\end{figure}
+
+% Slide 58
+\subsubsection{Reproduced Sound Field}
+
+To reproduce the sound field, it is necessary to compute the appropriate weight for each loudspeaker. The weight at the \( q \)th loudspeaker, positioned at point \( \mathbf{v} \), is given by:
+\[
+d_q(\mathbf{v}, \omega) = \sum_{n=0}^{N} \sum_{m=-n}^{n} \frac{-j \alpha_{nm}(\omega)}{(\omega / c) h_n^{(2)}((\omega / c) R)} Y_n^m(\theta_q, \phi_q) \Delta
+\]
+
+Here, \( \alpha_{nm}(\omega) \) are the spherical harmonic coefficients of the desired sound field and \( Y_n^m \) are the spherical harmonics evaluated at the loudspeaker position \( (\theta_q, \phi_q) \). The term \( \Delta \) accounts for the spherical distance between adjacent loudspeakers and it can be expressed as:
+\[
+\Delta = 2\pi R h, \quad \text{with} \quad h = R - \cos\left(\frac{\Delta \phi}{2}\right) R
+\]
+where \( \Delta \phi \) represents the minimum angular separation between adjacent loudspeakers on the spherical surface.
+
+
+\clearpage
+

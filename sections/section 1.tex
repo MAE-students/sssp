@@ -1,0 +1,1749 @@
+\section{Signal-Based Synthesis}
+
+\subsection{Introduction}
+
+In this chapter, we introduce an approach for \textbf{sound modelling} based on the signals description.
+Generally, we define different ways to model musical signals and different synthesis tools:
+
+\begin{itemize}
+    \item Spectral modelling (additive)
+    \item Time-frequency modelling (granular, Gabor, etc.)
+    \item Modal modelling
+    \item Physical modelling
+    \item Digital Waveguide Networks
+    \item Wave Digital Structures
+    \item Reverberation
+    \item Auralization
+    \item Spatialization
+\end{itemize}
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Timbre Definitions}]
+
+\textit{"The combination of qualities of a sound that distinguishes it from other sounds of the same pitch and volume".}
+
+From Wikipedia we can read:
+\textit{"In music, timbre, also known as tone color or tone quality (from psychoacoustics), is the perceived sound quality
+of a musical note, sound or tone".}
+
+McAdams and Bregman defined timbre as:
+\textit{"the psychoacoustician's multidimensional waste-basket category for
+everything that cannot be labeled pitch or loudness".}
+
+\end{tcolorbox}
+
+
+\textbf{Timbral planning} is an integral part of the composition process because timbre carries a great deal of layered information (semantic, emotional, evocative, ...): it is often the result of timbral interaction with the musical instrument.
+In pop music for example, the timbre design is really important to catch the attention of the audience.
+
+% \subsection{Sound Synthesis}
+
+We can classify \textbf{sound synthesis techniques} into two main categories: non-parametric and parametric methods.
+\textbf{Non-parametric methods} do not rely on an explicit model of the sound source, but rather operate directly on the signal. This group includes:
+
+\begin{itemize}
+  \item \textit{Additive synthesis}:  sound is built by summing individual sinusoidal components;
+  \item \textit{Subtractive synthesis}: starts from a rich signal and filters it to shape it into the desired sound;
+  \item \textit{Granular synthesis}: based on the manipulation of small sound fragments (i.e. \textit{grains});
+  \item \textit{Wavetable synthesis}: waveforms are pre-stored and read with variable frequency.
+\end{itemize}
+
+\textbf{Parametric methods}, instead, are based on explicit models of the sound generation mechanism. These include:
+
+\begin{itemize}
+  \item \textit{Non-linear distortion} techniques, such as:
+  \begin{itemize}
+    \item Phase/frequency modulation
+    \item Ring modulation
+  \end{itemize}
+  \item \textit{Modal synthesis}: models resonant modes of a system;
+  \item \textit{Physical modelling synthesis}: simulates the physical behaviour of the sound-producing system.
+\end{itemize}
+
+\clearpage
+
+We focus on \textbf{additive synthesis}, which consists in generating complex sounds through the superposition of simpler sounds (i.e. \textit{divide and conquer}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{sasp_im1.png}
+    \caption{Hydraulis (hydraulic or water organ)}
+\end{figure}
+
+The signal is reconstructed from a summation of sinusoids, each controlled in amplitude and frequency/phase:
+
+\[ y(t) = \sum_{i=1}^{N} A_i(t) \sin\left[\omega_i(t) \cdot t + \phi_i(t)\right] \]
+
+In order to synthesize the signal, we must analyse it first to determine the \textbf{amplitude} and \textbf{frequency trajectories} of each sinusoidal component (i.e. \textit{synthesis by analysis}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.285\linewidth]{sasp_im2.png}
+    \caption{Additive synthesis scheme with 4 oscillators}
+\end{figure}
+
+In order to implement additive synthesis, we need to define what an oscillator is.
+
+\clearpage
+
+\subsection{Sinusoidal Oscillators}
+
+The \textbf{oscillator} is a mechanism that generates a \textbf{periodic waveform} with a specified \textit{fundamental frequency} and \textit{amplitude}.
+It is a fundamental building block for all sound synthesis techniques and is characterized by the waveform shape it implements.
+Being periodic, the waves' shape has an infinitely large band.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{sasp_im3.png}
+    \caption{Examples of waveforms}
+\end{figure}
+
+The \textbf{sine wave} is the fundamental waveform for sound synthesis. It is simple to generate when a mathematical library is available:
+\[ y(n) = A \sin(\theta(n)) \]
+In some cases we need \textbf{phase wrapping}, which forces $\theta(n) \in \left[ -2\pi, 2\pi\right]$: 
+\[ \theta(n) = \left\{
+\begin{array}{lc}
+    \theta(n-1) + \Delta\theta & \text{if } \theta \leq 2\pi \\
+    \theta(n-1) + \Delta\theta - 2\pi & \text{if } \theta > 2\pi
+\end{array}, \right.
+\quad \Delta\theta = \frac{2\pi f_0}{F_s} \]
+Let us implement the sine wave starting from the following trigonometric equation (\textbf{biquad or direct form implementation)}:
+\[ \cos(\varphi + \theta) = 2 \cos(\theta)\cos(\varphi) - \cos(\varphi - \theta) \]
+We notice that the formula is recursive, where the next value of the cosine can be thought as:
+\[ \text{next sample} = 2 \cos(\theta) \cdot \text{current sample} - \text{previous sample} \]
+The output at a certain sample depends on the previous two values.
+Let us consider the \textit{coupled form} to describe the time evolution of both sine and cosine:
+\[ \left\{
+\begin{array}{c}
+    \cos(\varphi + \theta) = \cos(\varphi)\cos(\theta) - \sin(\varphi)\sin(\theta) \\
+    \sin(\varphi + \theta) = \cos(\varphi)\sin(\theta) + \sin(\varphi)\cos(\theta)
+\end{array} \right. \]
+Each equation uses its own past values and also past values of the other equation.
+From a system like that, we obtain an oscillator of frequency:
+\[ f_0 = F_s\frac{\Delta\theta }{2\pi} \]
+
+\clearpage
+\subsubsection{Matrix Data Model}
+
+A \textbf{matrix data model} defines a relation between past and present values of the \textit{state variables} $x_{1,2}$.
+New values $\hat{x}_{1,2}$ are obtained as rotation (rotation matrix $[R(\theta)]$) of the old values $x_{1,2}$.
+The model of the previous coupled form is:
+\[ 
+\begin{pmatrix}
+    x_1 \\
+    x_2
+\end{pmatrix}
+= 
+\begin{pmatrix}
+     \cos \left( \varphi \right) \\
+    \sin \left( \varphi \right)
+\end{pmatrix}
+\quad \Rightarrow \quad
+\left\{
+\begin{array}{c}
+    \hat{x}_1 = \cos(\varphi + \theta) \\
+    \hat{x}_2 = \sin(\varphi + \theta)
+\end{array} \right. \quad \Rightarrow \quad
+\begin{pmatrix}
+\hat{x}_1 \\
+\hat{x}_2
+\end{pmatrix}
+=
+\underbrace{ 
+\begin{bmatrix}
+\cos(\theta) & -\sin(\theta) \\
+\sin(\theta) & \cos(\theta)
+\end{bmatrix}
+}_{[R(\theta)] \ \text{rotation matrix}}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+\]
+\begin{proof}
+\[
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+=
+\begin{pmatrix}
+\cos(\varphi) \\
+\sin(\varphi)
+\end{pmatrix}
+\quad \Rightarrow \quad
+\begin{bmatrix}
+\cos(\theta) & -\sin(\theta) \\
+\sin(\theta) & \cos(\theta)
+\end{bmatrix}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+=
+\begin{bmatrix}
+\cos(\theta) & -\sin(\theta) \\
+\sin(\theta) & \cos(\theta)
+\end{bmatrix}
+\begin{pmatrix}
+\cos(\varphi) \\
+\sin(\varphi)
+\end{pmatrix}
+=
+\]
+\[
+=
+\begin{pmatrix}
+\cos(\theta)\cos(\varphi) - \sin(\theta)\sin(\varphi) \\
+\sin(\theta)\cos(\varphi) + \cos(\theta)\sin(\varphi)
+\end{pmatrix}
+=
+\begin{pmatrix}
+\cos(\varphi + \theta) \\
+\sin(\varphi + \theta)
+\end{pmatrix}
+=
+\begin{pmatrix}
+\hat{x}_1 \\
+\hat{x}_2
+\end{pmatrix}
+\]
+\end{proof}
+The model of the \textbf{biquadratic oscillator} is:
+\[
+\begin{pmatrix}
+\hat{x}_1 \\
+\hat{x}_2
+\end{pmatrix}
+=
+\begin{bmatrix}
+2\cos(\theta) & -1 \\
+1 & 0
+\end{bmatrix}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+\]
+The generalization of the \textbf{matrix data model} is:
+\[
+\begin{pmatrix}
+\hat{x}_1 \\
+\hat{x}_2
+\end{pmatrix}
+=
+\underbrace{
+\begin{bmatrix}
+a & b \\
+c & d
+\end{bmatrix}
+}_{[\mathrm{A}]}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+\]
+In order to implement an oscillator, we need a set of constraints on $ a, b, c, d $ (\textbf{Barkhausen criteria}):
+\[
+\det([\mathrm{A}]) = 1 \quad \Longleftrightarrow \quad ad - bc = 1, \qquad
+\abs{\Tr\left( \left[A\right] \right)} < 2 \quad \Longleftrightarrow \quad \abs{a+d} < 2
+\]
+The first condition implies \textit{unitary loop gain} (to guarantee stability, the output should decrease or might explode).
+The latter (along with the former) implies that the eigenvalues of $[\mathrm{A}]$ must be complex conjugate, with unitary modulus.
+In addition to that, $b$ and $c$ cannot be zero.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Numerical example - sinusoid oscillator implementation}]
+Let us see an example of matrix data model to implement sinusoid waveforms:
+\[
+\begin{pmatrix}
+\hat{x}_1 \\
+\hat{x}_2
+\end{pmatrix}
+=
+\begin{bmatrix}
+0.95 & -1 \\
+0.0975 & 0.95
+\end{bmatrix}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
+\qquad \text{initial condition: }
+\begin{pmatrix}
+1 \\
+0
+\end{pmatrix}
+\]
+This recursive system, initially fed with the specified initial condition, returns the following sinusoids:
+\begin{center}
+    \includegraphics[width=0.4\linewidth]{sasp_im4.png}
+\end{center}
+\end{tcolorbox}
+
+\subsubsection{Oscillator Output via Eigenvalue Decomposition}
+
+Let us define the initial state vector $\underline{\mathrm{x}}$ and the output of the oscillator $\underline{y}(n)$ at iteration $n$.
+The system evolves according to:
+\[ \underline{\mathrm{y}}(n) = [\mathrm{A}]^n \underline{\mathrm{x}} \]
+Let us exploit the \textbf{eigenvalue decomposition} of matrix $[\mathrm{A}]$.
+If $[\mathrm{A}]$ is diagonalizable, we can write express it as:
+\[
+[\mathrm{A}] = [\mathrm{Q}] [\mathrm{D}] [\mathrm{Q}]^{-1} \quad \Rightarrow \quad [\mathrm{A}]^n = [\mathrm{Q}] [\mathrm{D}]^n [\mathrm{Q}]^{-1} \quad \Rightarrow \quad \underline{\mathrm{y}}(n) = [\mathrm{Q}] [\mathrm{D}]^n [\mathrm{Q}]^{-1} \underline{\mathrm{x}}
+\]
+Where $[\mathrm{D}]$ is a diagonal matrix containing the eigenvalues of $[\mathrm{A}]$, while $[\mathrm{Q}]$ is the matrix of eigenvectors.
+In our case:
+\[
+[\mathrm{D}] = \begin{bmatrix}
+e^{j\theta} & 0 \\
+0 & e^{-j\theta}
+\end{bmatrix}, \quad
+[\mathrm{D}]^n = \begin{bmatrix}
+e^{jn\theta} & 0 \\
+0 & e^{-jn\theta}
+\end{bmatrix}, \quad \theta = \arccos \left( \frac{a+d}{2} \right)
+\]
+This shows that raising $[\mathrm{D}]$ to the power $n$ results in a \textbf{rotation} by an angle $\theta$ at each iteration, hence the oscillator produces a periodic signal.
+The matrix $[\mathrm{Q}]$ performs the \textbf{change of basis} from the original space (real) to the complex eigenbasis:
+
+\[
+[\mathrm{Q}] = \begin{bmatrix}
+1 & 1 \\
+\psi e^{j\phi} & \psi e^{-j\phi}
+\end{bmatrix}
+, \qquad
+\psi = \sqrt{-\frac{c}{b}}, \qquad
+\phi = \angle \eta, \qquad
+\eta = \frac{d - a + j \sqrt{4 - (a + d)^2}}{2b},
+\]
+
+\begin{tcolorbox}[colback=gray!10,colframe=black,title={Eigenvalue–Eigenvector Decomposition}]
+\small 
+\textbf{Eigenvalue–Eigenvector problem of the $2\times2$  matrix \([\mathrm{A}]\)} above aims at finding
+\[
+[\mathrm{A}]\;\underline{\mathrm{v}} \;=\;\lambda\ \underline{\mathrm{v}}
+\quad \Leftrightarrow \quad
+\left([\mathrm{A}]-\lambda\ [\mathrm{I}]\right) \cdot \underline{\mathrm{v}} =
+\begin{pmatrix}
+    a - \lambda & b \\
+    c & d-\lambda
+\end{pmatrix} \cdot \underline{\mathrm{v}}
+=\underline{\mathrm{0}}.
+\]
+The eigenvalues \(\lambda_i\) satisfy
+\[
+\det\!\bigl([\mathrm{A}]-\lambda\ [\mathrm{I}]\bigr)= \lambda^2 - \left(a+d\right)\lambda + ad - bc =0
+\quad \Longrightarrow \quad
+\lambda_{1,2}
+=\frac{(a+d)\pm\sqrt{(a-d)^2+4\ b\ c}}{2}\ .
+\]
+
+\textbf{Condition for complex‐conjugate eigenvalues:}
+\[
+(a-d)^2+4\ b\ c<0
+\quad \Longrightarrow \quad
+\lambda_{1,2}
+=\frac{a+d}{2}\pm j\frac{\sqrt{-\bigl((a-d)^2+4\ b\ c\bigr)}}{2},
+\]
+so that \(\lambda_2=\overline{\lambda_1}\).  
+The corresponding eigenvectors \(\underline{\mathrm{v}}_i\) satisfy
+\[
+\bigl([\mathrm{A}]-\lambda_i\ [\mathrm{I}]\bigr)\ \underline{\mathrm{v}}_i
+=\underline{\mathrm{0}}
+\quad \Longrightarrow \quad
+\underline{\mathrm{v}}_i
+=\begin{pmatrix}
+\mathrm{b}\\[4pt]
+\lambda_i - \mathrm{a}
+\end{pmatrix}, \quad \underline{\mathrm{v}}_2=\overline{\underline{\mathrm{v}}_1} 
+\]
+
+\textbf{Decomposition:}\\
+Ordering \(\lambda_1\ge\lambda_2\) gives
+\[
+[\mathrm{D}]
+=\begin{pmatrix}\lambda_1&0\\[4pt]0&\lambda_2\end{pmatrix},
+\quad
+[\mathrm{Q}]
+=\begin{pmatrix}
+\mathrm{b} & \mathrm{b}\\[4pt]
+\lambda_1 - \mathrm{a} & \lambda_2 - \mathrm{a}
+\end{pmatrix} \quad \Rightarrow \quad  [\mathrm{A}] = [\mathrm{Q}]\ [\mathrm{D}]\ [\mathrm{Q}]^{-1}
+\]
+\end{tcolorbox}
+
+\clearpage 
+The parameter $ \theta $ is the step angle of oscillation (i.e. the angular increment per iteration), while $[\mathrm{Q}]$ and $[\mathrm{Q}]^{-1} $ are the mappings between internal (complex) and external (real) spaces.
+We can interpret the process in three stages:
+
+\begin{itemize}
+  \item Mapping the external space (initial representation of the signal) into the internal space (complex) using $[\mathrm{Q}]^{-1} $;
+  \item Within the internal space: applying two internal complex conjugate rotations via $[\mathrm{D}]^n $, in opposite direction to preserve real-valued output;
+  \item Mapping the result back into the external space using $[\mathrm{Q}]$.
+\end{itemize}
+
+\subsubsection{Interpretation of the Rotation Matrix}
+
+Let us try now to interpret the rotation matrix:
+\begin{itemize}
+    \item $ \phi $ is the \textit{phase shift} between the two state variables, to obtain quadrature outputs, we must have:
+
+    \[ \phi = \pm \frac{\pi}{2} \quad \Rightarrow \quad a=d \]
+    
+    \item $ \psi $ is the \textit{amplitude} of the second state variable with respect to the first, to obtain equal amplitudes we must have:
+    \[ b = -c \]
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{sasp_im5.png}
+    \caption{DSP implementation of a generic oscillator (through rotation matrix $[\mathrm{A}]$)}
+\end{figure}
+
+NB: Quadrature outputs are the two state-variable outputs that differ by a 90° phase shift
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Rotation Matrix in Oscillators}]
+
+In discrete-time sinusoidal oscillators, the \textbf{rotation matrix} defines how the state vector evolves at each time step, performing a rotation in the phase space.
+
+Multiplying a vector by $ [\mathrm{A}] $ rotates it by an angle $ \theta $, corresponding to one time step of the oscillator with angular frequency $ \theta $. This structure is ideal for generating sinusoids.  
+\end{tcolorbox}
+
+\clearpage
+\subsubsection{Biquad and Waveguide Oscillators}
+
+\begin{figure}[H]
+  \centering
+  % First column
+  \begin{minipage}[t]{0.48\textwidth}
+    An example of oscillator implementation is the \textbf{biquad oscillator}:
+    \[
+      [\mathrm{A}]_{\mathrm{biquad}}
+      = 
+      \begin{pmatrix}
+        k & -1 \\[4pt]
+        1 & 0
+      \end{pmatrix},
+      \quad
+      k = 2\cos(\theta)
+    \]
+    \vspace{1em}
+    \centering
+    \includegraphics[width=0.67\linewidth]{sasp_im6.png}
+    \caption{DSP implementation of a biquadratic oscillator}
+  \end{minipage}\hfill
+  % Second column
+  \begin{minipage}[t]{0.48\textwidth}
+    Another example of oscillator implementation is the \textbf{waveguide oscillator}:
+    \[
+      [\mathrm{A}]_{\mathrm{waveguide}}
+      = 
+      \begin{pmatrix}
+        k & k - 1 \\[4pt]
+        k + 1 & k
+      \end{pmatrix},
+      \quad
+      k = \cos(\theta)
+    \]
+    \vspace{1em}
+    \centering
+    \includegraphics[width=0.8\linewidth]{sasp_im7.png}
+    \caption{DSP implementation of a digital waveguide oscillator}
+  \end{minipage}
+\end{figure}
+
+
+
+
+\subsubsection{Dynamic Amplitude Control}
+
+Algorithmic oscillators are often described as \textit{ballistic}, meaning that they evolve freely over time \textbf{without external correction}. While this behaviour can be acceptable in the short term, over longer durations it can lead to issues: numerical errors may accumulate and cause the oscillator to drift or stop oscillating, thus violating the Barkhausen condition.
+
+To maintain stability, an amplitude control mechanism is needed.
+A standard solution is the \textbf{Automatic Gain Control (AGC)}, which adjusts the oscillator’s state based on its output power.
+The idea is simple: when the output power exceeds a desired threshold, the gain is reduced and vice versa.
+
+The general expression for the oscillator's \textbf{output power} is:
+
+\[ P = \frac{x_1^2 - \frac{b}{c}x_2^2 - 2\sqrt{-\frac{b}{c}} \ x_1 x_2 \cos(\phi)}{\sin^2(\phi)} \]
+
+The AGC mechanism is typically implemented in three steps:
+
+\begin{enumerate}
+    \item \textbf{Measure the oscillator’s output power}, using the simplified expression of quadrature oscillators (where the cross-term vanishes):
+    \[     P = x_1^2 - \frac{b}{c} x_2^2 \]
+
+    \item \textbf{Compute the gain factor} to correct the amplitude:
+    \[ G = \frac{P_0^q}{P^q}, \qquad P_0 = \text{target power}, \qquad q = 0.5 \]
+    
+    A first-order approximation is often used:
+    \[G = \left(\frac{P}{P_0}\right)^{-q} \quad \Rightarrow \quad G \approx \underbrace{G \left(P=P_0\right)}_{=1} + \underbrace{\left.\frac{dG}{dP/P_0}\right|_{P=P_0}}_{=-q} \left( \frac{P}{P_0}-1 \right) = 1 + q - q \frac{P}{P_0} \]
+
+    \item \textbf{Apply the gain} by scaling the state variables by $ G $.
+\end{enumerate}
+
+\subsubsection{Dynamic Frequency Control}
+
+In many applications, it is important to \textbf{control both} the \textbf{frequency} and the \textbf{amplitude} trajectories of an oscillator over time.
+However, adjusting the frequency requires updating the value of $ k $ in the rotation matrix for each new frequency $ \theta $ value.
+
+This creates a \textbf{challenge}: since the oscillator's \textbf{amplitude} is also \textbf{affected by frequency}, maintaining a stable output during dynamic changes becomes difficult.
+In addition to that, the coefficients in the power computation formula must be constantly updated as the frequency varies, which is both cumbersome and computationally inefficient.
+On top of that, we still need to independently control the amplitude trajectory of the oscillator.
+
+A more elegant solution to all these issues is provided by the use of a \textbf{coupled-standard quadrature oscillator}, which simplifies frequency control while keeping amplitude stable and decoupled from frequency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{sasp_im8.png}
+    \caption{Properties of the recursive oscillators}
+\end{figure}
+
+
+\subsubsection{Wavetable Sinusoidal Oscillator}
+
+A practical and efficient method for implementing oscillators is through the use of \textbf{wavetables}.  
+The idea is to pre-compute and store one period of a sinusoid in a circular table (or buffer) of length $ L $.  
+Assuming a sampling period $ T_s $, this corresponds to a signal with period $ T_0 = L \cdot T_s $ and frequency $ f_0 = \frac{1}{T_0} $.
+
+We often need to generate sinusoids at arbitrary frequencies: a simple (yet inefficient) solution would be to store one table for each frequency.
+A better (and scalable) solution is to use a single table and control the playback frequency by adjusting the \textbf{reading step size} $\Delta$.
+
+For a desired output frequency $ f_0 $, we read the table every $ \Delta $ samples:
+
+\[ \Delta = \frac{f_0 \cdot L}{F_s}, \qquad F_s = \frac{1}{T_s} \ \text{sampling rate [Hz]} \]
+
+Since $ \Delta $ is usually a \textbf{non-integer} (ratio $f_0/F_s$ not integer), we end up reading values between table entries.  
+To handle this, we need to \textbf{interpolate} between the wavetable samples to estimate the intermediate values.
+In this way, the oscillator smoothly steps through the wavetable at the correct rate (sampling period) to produce the desired frequency.
+
+\clearpage 
+
+\subsection{Additive Synthesis}
+
+This is a \textbf{non-parametric model}.
+The deterministic component of a sound produced by a physical system usually corresponds to its main modes of vibration.  
+For instance, in wind instruments, this component arises from self-sustained oscillations inside the instrument’s bore.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Oscillators and Additive Synthesis}]
+In additive synthesis, complex sounds are generated by summing multiple simple sinusoidal components.  
+Each of these components is produced by an \textbf{oscillator} that generates a sine wave with specific frequency, amplitude and phase (those parameters may change over time).
+Therefore, oscillators are the fundamental building blocks of additive synthesis:  
+
+\begin{center}
+\textit{Additive Synthesis = Sum of Many Oscillators}
+\end{center}
+\end{tcolorbox}
+
+In pitched sounds, the signal's energy is concentrated at specific discrete frequencies $ f_k $, known as \textbf{partials}.  
+Each partial has amplitude $ a_k $ and frequency $ f_k $ that may vary over time - due to effects like vibrato or dynamic changes - but these variations are typically slow and smooth, allowing them to be effectively modelled by simply tracking the sinusoidal trajectories.
+
+\subsubsection{Sinusoidal Model}
+
+A widely used and powerful way to represent this behaviour is through the \textbf{sinusoidal model} in the discrete-time domain,  
+where the signal is expressed as a sum of time-varying sinusoids:
+
+\[ s(n) = \sum_k a_k(n) \cos\left( \phi_k(n) \right) \]
+
+The phase $ \phi_k(n) $ evolves recursively according to the following expression:
+
+\[
+\omega_k(n) = \frac{\partial \phi_k(n)}{\partial t} \approx \frac{\phi_k(n)-\phi_k(n-1)}{T_s}
+\quad \Rightarrow \quad
+\phi_k(n) = 2\pi f_k(n) \ T_s + \phi_k(n-1), \qquad T_s: \text{sampling period [s]}
+\]
+
+The sinusoidal model can be used to synthesize a wide variety of sounds.
+\textbf{Periodic sounds}, for instance, are characterized by \textbf{partials} of frequency $ f_k(n) $ so that:
+
+\[ f_k(n) \approx k \ f_0(n), \quad k \in \mathbb{N^*} \]
+
+Even aperiodic and inharmonic sounds can be represented effectively, if their spectral energy is concentrated near discrete frequencies, but generally we cannot make any assumption on the frequencies.
+
+This model is very intuitive, as it closely aligns with the way we perceive sounds.
+However, it is important to note that the model requires a \textbf{very large number of control parameters}.
+Specifically, we must define \textbf{amplitude} and \textbf{frequency trajectories} for all the partials of each note to be synthesized (i.e. of each oscillator to drive).
+These amplitude trajectories often depend on expressive characteristics, such as the strength of the note (i.e. the velocity with which a key is pressed).
+Despite its complexity, the sinusoidal model offers great flexibility and precision in sound synthesis.
+
+\subsubsection{Sound Signal Model}
+
+A generic sound signal is given by a deterministic component (\textbf{sinusoidal model}) and a \textbf{stochastic} term:
+
+\[ y(n) = \underbrace{\sum_{i=0}^{I} A_i(n) \cos\left[ \phi_i(n) \right]}_{\text{deterministic part}} + \underbrace{e(n)}_{\text{stochastic part}} \]
+
+The sinusoidal parameters are the amplitude $A_i(n)$ and the phase $\phi_i(n)$ (defined the same as before):
+
+\[ \phi_i(n) = \int_0^{nT} \omega_i(\tau)\ d\tau + \phi_{0,i}, \qquad \phi_{0,i} = \phi_i(0) \]
+
+The sound representation of sinusoidal model and noise is very useful in audio analysis and synthesis.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Continuous-time vs Discrete-time}]
+Although additive synthesis is conceptually described using continuous-time sinusoids, its digital implementation operates on discrete-time signals, generated by digital oscillators through sampling.
+\end{tcolorbox}
+
+\subsubsection{Magnitude-only Synthesis}
+
+In order to define the sinusoidal parameters, we may decide how to approach the \textbf{sound analysis}.
+Using a \textit{filterbank-based analysis}, we can directly control the oscillators magnitude, while ignoring the phase information.
+However, the results tend to be modest: the synthesized signal does not accurately reproduce the original waveform's structure.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{sasp_im9.png}
+    \caption{Comparison between original sound and magnitude-only synthesis}
+\end{figure}
+
+To achieve a more faithful reconstruction, it becomes necessary to account for the phase.
+This requires a more sophisticated analysis approach, such as:
+
+\begin{itemize}
+    \item Etherodyne demodulation with filterbanks (\textit{refer to DAAP module})
+    \item Short-Time Fourier Transform (STFT)
+\end{itemize}
+
+\subsubsection{STFT-based Analysis}
+
+The \textbf{STFT approach} for signal analysis consists in identifying the peaks location and height of the sound spectrum.
+The Fourier-Transform $\mathscr{F} \left\{\cdot\right\}$ needs a finite-duration signal, so we need to isolate a portion of it: the simple \textbf{extraction} is equivalent to a windowing process with a rectangular function.
+A \textbf{windowed signal} has the following expression:
+\[ x_w(n) = x(n) \cdot w(n) \]
+Let us consider a simple sine wave at $2$ KHz: a windowed sinusoid suffers from \textbf{sidelobes} in the spectrum - instead of having an impulse, we have various frequency components around the fundamental frequency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{sasp_im10.png} 
+    \caption{Sine wave (left), Hamming window (right, time and frequency representation) and spectrum of the windowed sinusoid (bottom)}
+\end{figure}
+
+The amount of \textbf{spectral leakage} depends on the type of window $w$ used to extract the signal samples: a common and better approach is to use a \textbf{smoother window} (like a Hamming window) to limit this undesired spectral effect and have a more accurate frequency representation of the signal, in addition to avoid any discontinuity in time.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Window Type vs Spectral Analysis (\textit{refer to DAAP module})}]
+The choose of window type (of length $M$) greatly affects the frequency representation result: there is usually a trade-off between accuracy (mainlobe width) and leakage (sidelobe amplitude).
+
+NB: $\Omega_M$ represents the “fundamental” digital frequency step
+
+\begin{center}
+    \begin{tabular}{cccc}
+        \toprule
+        \textbf{Window type} & \textbf{Peak sidelobe amplitude (dB)} & \textbf{Mainlobe width} & \textbf{Roll off} \\ [1ex]
+        \midrule
+        Rectangular & -13 & $ \frac{4\pi}{M-1} \approx 2\Omega_M $ & 6 dB/oct \\ [2ex]
+        Barlett $\Delta$ & -25 & $ \frac{8\pi}{M} = 4\Omega_M $ & 12 dB/oct \\ [2ex]
+        Hann & -31 & $ \frac{8\pi}{M} = 4\Omega_M $ & 18 dB/oct \\ [2ex]
+        Hamming & -41 & $ \frac{8\pi}{M} = 4\Omega_M $ & 6 dB/oct \\ [2ex]
+        Blackman & -58 & $ \frac{12\pi}{M} = 6\Omega_M $ & 18 dB/oct \\ [2ex]
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+\end{tcolorbox}
+
+The \textbf{spectral resolution} of the frequency representation depends on the duration of the analysis window: the resolution is usually proportional to the \textbf{window length}.
+So, the window length is crucial in terms of frequency resolution and the successful - or not - analysis depends on it:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{sasp_im11.png} 
+    \caption{Effect of window length on spectral resolution for two close sinusoids ($2000$ Hz and $2200$ Hz)}
+\end{figure}
+
+
+The use of a short window results in a wider main-lobe in frequency, so if two spectral components are closer than that main‐lobe width, their lobes will overlap and merge into a single peak (same main-lobe).
+As a result, the frequency content is blurred and the two sinusoids are not clearly distinguishable.
+We can avoid that by \textbf{making the window longer than the desired frequency resolution $\Delta f$ gets lower}.
+
+\subsubsection{Sinusoidal Peaks Tracking}
+In order to use the STFT information to drive the bank of oscillators (for the additive synthesis), we want to be able to \textbf{track} the \textbf{spectrum peaks} over time (frame after frame).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{frequency trajectory.png}
+    \includegraphics[width=0.3\linewidth]{magnitude trajectory.png}
+    \caption{Frequency trajectories (left) and amplitude trajectories (right)}
+\end{figure}
+
+This \textit{synthesis by analysis} technique is suitable for both harmonic and inharmonic sounds, such as piano tones or percussive instruments.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Harmonic vs Inharmonic Sounds}]
+\textbf{Harmonic sounds} consist of partials whose frequencies are integer multiples of a fundamental frequency $ f_0 $. They are perceived as tonal and are typical of musical instruments like voice, violin, or piano.
+
+\textbf{Inharmonic sounds} contain partials that do not align with integer multiples of a fundamental. These are often non-tonal and appear in instruments like bells, gongs, or cymbals.
+
+\vspace{0.2em}
+\textit{Partials description for:}
+\begin{itemize}
+  \item Harmonic sounds: $ f_k = k \cdot f_0 $
+  \item Inharmonic sounds: $ f_k \neq k \cdot f_0 $
+\end{itemize}
+\end{tcolorbox}
+
+The STFT-based analysis focuses on identifying the \textbf{spectral peaks}, from which the sinusoidal parameters - amplitude and frequency - are estimated directly from the magnitude spectrum.
+While the method is \textbf{non-coherent} - meaning that phase consistency across frames is not strictly maintained - the accuracy is improved by applying \textbf{quadratic interpolation} around the spectral peaks.
+The original sound is then represented as a collection of \textbf{amplitude} and \textbf{frequency trajectories} over time.  
+This representation makes it straightforward to perform transformations like \textbf{time-stretching} or \textbf{pitch-shifting}, since modifying trajectories is more intuitive and flexible than working with raw audio directly (\textit{refer to DAAP module}).
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{FFT vs STFT}]
+\textbf{FFT} is used to analyse signals that are assumed to be \textit{stationary}: their spectral content does not change over time (like in a single time frame).
+
+\textbf{STFT} is used when the signal is \textit{non-stationary}, meaning its frequency content varies with time.  
+It applies the FFT over short consecutive frames, producing a time-frequency representation.
+\end{tcolorbox}
+
+\subsubsection{Peak Detection}
+The \textbf{detection} of the \textbf{spectral peaks} is usually performed on the magnitude spectrum: local maxima are identified as candidate partials.
+To improve the parameter estimation, the corresponding phase values at those frequencies are also extracted from the phase spectrum - at the frequencies where the phase is constant.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{sasp_im12.png} 
+    \caption{Peak detection in magnitude spectrum (top) and phase spectrum (bottom)}
+\end{figure}
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Parabolic Interpolation for Peak Detection (\textit{refer to DAAP module})}]
+The peak detection in the magnitude spectrum is usually implemented by means of \textit{parabolic interpolation}: the FFT peaks are well approximated by upside-down parabolas.
+
+\begin{center}
+    \includegraphics[width=0.5\linewidth]{Parabolic interpolation.png}
+\end{center}
+
+\end{tcolorbox}
+
+\subsubsection{Peak Tracking across frames}
+The general analysis system - frame to frame - is given by:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{sasp_im13.png}
+    \caption{Sinusoidal peak tracking system based on STFT and interpolation}
+\end{figure}
+
+We multiply the input signal $ s(t) $ by a window function and transform this frame using the FFT.
+From the FFT output, we identify the spectral peaks from the \textit{magnitude spectrum} - tracked over time.
+We apply quadratic interpolation to refine the peak locations estimation, improving the accuracy of frequency and amplitude estimation.
+We compute the \textit{phase information} separately (using the definition of phase for a complex signal), though it is often discarded for steady-state signals.
+However, it becomes important in transients - when accurate reconstruction requires phase information.
+
+To reconstruct a continuous time-varying sinusoidal model, spectral peaks must be correctly associated from frame to frame.
+When the phase information is discarded, as in the PARSHL method, \textbf{linear interpolation} can be used to estimate amplitude and frequency trajectories between frames.  
+If phase is retained, \textbf{cubic interpolation} allows for more accurate phase continuity, as proposed by McAulay and Quatieri.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{sasp_im14.png}
+    \caption{Frequency trajectory estimation via peak-tracking and interpolation}
+\end{figure}
+
+It is necessary to identify which spectral peaks (in adjacent frames) belong to the same partial.
+This process, known as \textbf{peak tracking}, involves connecting peaks across time frames to form coherent frequency trajectories.
+However, different challenges arise: gaps can occur due to missing data or noise and spurious peaks can be mistakenly interpreted as new partials.
+For this reason, one should avoid prematurely declaring a trajectory as ended (death), in case there is a gap, or starting a new one (birth), for possible noise problem, without strong evidence.
+
+A helpful guideline is to exploit harmonic relationships between peaks, even when the fundamental component is missing: this improves continuity.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{sasp_im15.png}
+    \caption{Trajectories tracking over time: birth and death events of sinusoidal components}
+\end{figure}
+
+A sharp attack in a sound is usually followed by a more stable release.
+For this reason, peak tracking tends to be more effective when stable trajectories are reached gradually and released suddenly, rather than the opposite.  
+This motivates the use of \textbf{backward-in-time analysis}, which starts from stable portions of the sound and moves toward the transients.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{sasp_im16.png}
+    \caption{Frequency tracking across frames}
+\end{figure}
+
+When harmonicity can be assumed, tracking performance can be improved to guide the peak association.  
+However, in the presence of noisy spectra, this process becomes significantly more complex and less reliable.
+
+To support this process, a \textbf{transient detector} can be employed to indicate where the phase of a peak should be preserved. Some methods to detect transients include:
+
+\begin{itemize}
+    \item Differentiated amplitude envelope of a high-pass filtered time-domain signal
+    \item Linear prediction error
+\end{itemize}
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Interpolated Trajectories in Digital Oscillators}]
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 1.3cm]
+    \tikzstyle{block} = [rectangle, draw=black, fill=gray!10,
+        text centered, text width=4cm, minimum height=2.8em, rounded corners]
+    \tikzstyle{arrow} = [thick, ->, >=stealth]
+
+    \node[block] (analysis) {Analysis};
+    \node[block, right=of analysis] (interp) {Interpolation\\(builds smooth trajectories)};
+    \node[block, right=of interp] (osc) {Digital Oscillator\\(needs per-sample data)};
+    
+    \draw[arrow] (analysis) -- (interp);
+    \draw[arrow] (interp) -- (osc);
+\end{tikzpicture}
+\end{center}
+\textbf{Why it’s needed:} Oscillators operate at the sample rate and require updated frequency and amplitude for every sample.
+However, analysis methods produce sparse data (i.e. once every frame).  
+Interpolation bridges this gap by constructing per-sample values from sparse estimates.
+
+\end{tcolorbox}
+
+\subsubsection{Synthesis}
+
+Synthesis is performed using a bank of amplitude and phase modulated oscillators:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{Additive synthesis.png}
+    \includegraphics[width=0.45\linewidth]{Synthesis system.png}
+    \caption{Additive synthesis block (left), phase preservation (right)}
+\end{figure}
+
+The left diagram shows a basic \textbf{additive synthesis} block: a bank of oscillators, each with time-varying amplitude $ A_i(t) $ and frequency $ f_i(t) $.
+
+The right diagram focuses on \textbf{phase preservation}: accurate synthesis requires both amplitude $ A(t) $ and phase $ \Theta(t) $ reconstruction.  
+\textit{Phase unwrapping} and \textit{interpolation} are applied to ensure continuity across frames before feeding the oscillators bank. The signal is then reconstructed by combining the phase-controlled oscillators with their amplitude envelopes.
+
+\subsubsection{Spectral Modelling Synthesis (SMS)}
+
+In \textbf{Spectral Modelling Synthesis}, the time-varying spectrum of a signal is modelled as the sum of two components: a \textbf{deterministic component} - consisting of a sum of time-varying sinusoids - and a \textbf{stochastic component}, represented by filtered noise.
+Formally, the signal $ s(t) $ is written as:
+
+\[
+s(t) = \underbrace{\sum_{i=1}^N A_i(t) \cos[\theta_i(t)]}_{\text{deterministic part}} + \underbrace{e(t)}_{\text{stochastic part}}
+\]
+
+We describe the stochastic part $ e(t) $ as a white noise $ u(t) $ filtered by a linear time-varying filter $ h_t $:
+
+\[
+e(t) = h_t * u \ (t) = \int_{-\infty}^{+\infty} h_t(t - \tau) \ u(\tau) \ d\tau
+\quad \Rightarrow \quad
+s(t) = \sum_{i=1}^N A_i(t) \sin[\omega_i(t) t + \phi_i(t)] + h_t * u \ (t)
+\]
+
+The impulse response $ h_t(\tau) $ shapes the white noise spectrum - which has a constant spectrum magnitude.
+
+In the SMS scheme, we identify the sinusoidal parameters analyzing the magnitude spectrum of the signal - extracting \textbf{amplitude} and \textbf{frequency trajectories} over time - and we use them to drive the oscillators bank (additive synthesis).
+The resulting signal describes only the deterministic component of the signal (sum of sinusoids), so we can extract the stochastic component (residual noise component) by subtracting the oscillators bank output from the original signal.
+Finally, we apply an envelope approximation to define the spectral envelope of the residual, which helps complete the overall sound texture.
+Since we lack any phase information of the original sound, we assume that the residual has \textbf{random phase}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{sms.png}
+    \caption{Spectral modelling synthesis - residual identification for a specific frame}
+    \label{fig:sms}
+\end{figure}
+
+As anticipated, the deterministic components is the result of additive synthesis from amplitude and frequency trajectories - eventually modified by \textit{music transformations}.
+In parallel, the stochastic component has an already-computed envelope and random phase - which is all the necessary information to describe a signal FFT.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{sms_block.png}
+    \caption{Spectral modelling synthesis - deterministic and stochastic terms reconstruction}
+\end{figure}
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Why Differentiate Between Deterministic and Stochastic Components?}]
+The deterministic part (sinusoids) describes the stable, periodic elements of the sound (i.e. harmonic content), which can be efficiently modelled using oscillators with smooth amplitude and frequency trajectories.
+
+The stochastic part (residual noise) describes unpredictable, noisy components (i.e. breath, consonants), which are better modelled statistically in the frequency domain.
+
+Separating them allows for more accurate and flexible synthesis, ensuring naturalness and efficiency in sound modelling.
+\end{tcolorbox}
+
+The extraction of a broad-spectrum noise residual could be performed either in the frequency domain (FFT of the residual, as already described) or directly by subtraction in the time domain (between original frame and reconstructed one). This is possible because the STFT analysis preserves the information on phase (\textit{waveshape preservation}).
+The stochastic component can be represented on a frame-by-frame basis, but the corresponding frame can be smaller than the analysis frame so that transients are captured more accurately.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{sms reconstruction.png}
+    \caption{Example of reconstruction based on Spectral Modelling Synthesis}
+\end{figure}
+
+\subsubsection{Residual Spectral Fitting}
+
+The \textbf{stochastic component} of a sound (the noisy part) is typically modelled as \textbf{broadband noise} shaped by a linear filter that colours its spectrum.  
+This approach corresponds to a \textbf{subtractive synthesis} model and its parameters can be estimated using \textbf{Linear Predictive Coding (LPC)} analysis.
+
+However, when the purpose of the \textit{sines + noise} decomposition is to allow sound modification or transformation, it is often more convenient to model the stochastic part in the \textbf{frequency domain}. So, instead of storing filter coefficientes, you store the mangitude spectrum of the residual approximated by means of a
+piecewise-linear function, that is described by the coordinates of the joints
+l The time-domain resynthesis can be operated in the time domain by inverse FFT, after
+having imposed the desired magnitude profile and a random phase profile.
+
+Although spectral representations are more meaningful for sound analysis, in many practical applications it is more efficient to carry out sound synthesis directly in the \textbf{time domain}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\linewidth]{time_domain substraction.png}
+    \caption{Residual computation via time-domain subtraction}
+\end{figure}
+
+An example of the pipeline for \textit{music transformations} is:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{framework music.png}
+    \caption{Framework for music transformations}
+\end{figure}
+
+This diagram shows a hybrid approach to sound synthesis, where both deterministic and stochastic components are generated and combined.  
+The \textbf{deterministic part}, based on frequency and magnitude inputs, is shaped through musical transformations and synthesized using \textbf{additive synthesis}.  
+The \textbf{stochastic part} uses noise filtered through a spectral envelope shaped by intensity and coefficient parameters, handled via \textbf{subtractive synthesis}.  
+The two parts are finally summed to produce a complete, realistic sound.
+
+% \begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Phase Usage in Residual Computation vs Reconstruction}]
+
+% In Spectral modelling Synthesis (SMS), the phase plays different roles in the analysis and synthesis stages:
+
+% \begin{itemize}
+%     \item \textbf{During analysis (residual extraction):}  
+%     The original signal is analysed using the STFT, which preserves phase.  
+%     This allows accurate reconstruction of the sinusoidal part, which is then subtracted in the \textbf{time domain} to isolate the residual.  
+%     $\Rightarrow$ \textit{Phase is preserved and used.}
+
+%     \item \textbf{During synthesis (residual reconstruction):}  
+%     The residual is resynthesized using its spectral envelope.  
+%     Since phase information is not available or relevant in this stage, a \textbf{random phase} is assigned before applying the inverse FFT.  
+%     $\Rightarrow$ \textit{Random phase is used for IFFT.}
+% \end{itemize}
+
+% \end{tcolorbox}
+
+\subsubsection{Sound Modifications}
+
+The sinusoidal model enables flexible and powerful sound transformations by treating the sinusoidal and stochastic components separately.
+
+One of the main applications is \textbf{spectral colouring}, where the spectral profile of the sound can be freely modified to emphasize or attenuate specific regions. This also allows the user to enhance either the sinusoidal or the stochastic components.
+
+The model supports \textbf{time scaling}, which allows the sound's duration to be modified without affecting its pitch. Conversely, \textbf{pitch scaling} can be applied to transpose the sound in frequency while preserving its temporal characteristics.
+
+More advanced transformations include \textbf{morphing} and \textbf{cross-synthesis}, where characteristics from one sound are blended or imposed onto another. For example, the spectral envelope of a source sound can be transferred to a different target sound. Also a residual from a different sound can be used for resynthesis.
+
+% A well-known commercial example of additive synthesis is the \textbf{Synclavier}, an early digital synthesizer and sampler developed at Dartmouth College and released in 1975 by New England Digital. It was one of the first instruments to fully integrate digital technology, combining \textbf{FM synthesis} with \textbf{sampling} to create complex sounds, which were stored on large hard drives - introducing the concept of the "tapeless studio". The Synclavier was extremely expensive, priced between \$200,000 and \$500,000 and only 13 units were ever produced. Over the years, several versions were released, including a recent software emulation by Arturia.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.23\linewidth]{synclavier.png}
+    \includegraphics[width=0.4\linewidth]{synclavier 2.png}
+    \caption{Synclavier synthesizer (left) and Arturia's plugin (right)}
+\end{figure}
+
+\subsection{Oscillators}
+
+The \textbf{oscillator} is the fundamental building block of all sound synthesis techniques: it generates a \textbf{periodic waveform} with specific fundamental frequency, amplitude and shape.
+
+Up to this point, we have considered oscillators that generate pure sine waves, which serve as the basis for additive synthesis. 
+More complex waveforms can also be produced - such as square, sawtooth, triangle.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{waves.png}
+    \includegraphics[width=0.3\linewidth]{waves 2.png}
+    \caption{Examples of harmonic waves}
+\end{figure}
+
+\subsubsection{DT Sawtooth Oscillator}
+
+The \textbf{simplest way} to implement a discrete-time \textbf{sawtooth waveform} is to sample a continuous-time linear ramp and shift it to remove its DC offset:
+
+\[
+s(n) = 2 \left[ n \frac{f_0}{F_s} \right]_{\text{mod}_1} - 1, \quad n = 0, 1, \ldots, N \qquad f_0: \text{fundamental frequency [Hz]}, \quad F_s: \text{sampling rate [Hz]}
+\]
+
+The value inside the mod operation creates a repeating ramp that wraps around when reaching 1 (the maximum value), going back to 0.
+Multiplying by 2 stretches the range to $[0, 2)$ and subtracting 1 centers the waveform around zero, effectively removing the DC offset.
+
+The counter increment per sampling interval is $ 2 f_0/F_s $ and whenever the counter is about to exceed 1, we subtract 2 to restart the ramp from the bottom.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Aliasing in Naive CT-Sawtooth Sampling}]
+
+A continuous-time sawtooth contains infinite harmonics at $f_k=k f_0$ integer multiples of the fundamental, with amplitudes decreasing as $ 1/k $, resulting in a spectral roll-off of approximately $ 6 $ dB/oct.
+
+When the CT sawtooth is sampled at $F_s=44.1$ KHz without any anti-aliasing filter, the high-frequency harmonics above the Nyquist frequency $ F_s/2 $ fold back into the audible spectrum.
+
+This results in a distorted and unnatural sound, even if the spectral roll-off shape is preserved: aliasing introduces non-harmonic components, degrading the perceived quality of the original waveform.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{sawtooth.png}
+    \caption{DT-Sawtooth - waveform (left) and spectrum (right)}
+\end{figure}
+
+\end{tcolorbox}
+
+To reduce or eliminate \textbf{aliasing} in digital oscillator implementations, several strategies can be used:
+
+\begin{itemize}
+    \item \textbf{Bandlimited algorithms}: explicitly generate only the harmonics below the Nyquist frequency. This method includes additive synthesis (finite number of sinusoids);
+    
+    \item \textbf{Quasi-bandlimited algorithms}: approximate a bandlimited signal by sampling a continuous-time waveform after low-pass filtering;
+    
+    \item \textbf{Spectral tilt modification}: shaping the spectrum of the waveform by adjusting the slope of the harmonics amplitudes, effectively reducing high-frequency energy that may cause aliasing.
+\end{itemize}
+
+
+\subsubsection{DT Sawtooth Implementation by Additive Synthesis}
+
+\textbf{Additive synthesis} reconstructs a waveform by summing its \textbf{sinusoidal components}, as given by the Fourier series.
+To avoid aliasing, only the first $ K $ harmonics below the Nyquist frequency are synthesized:
+
+\[
+s(n) = - \sum_{k=1}^{K} \frac{1}{k} \sin\left( 2\pi \frac{f_0}{F_s} kn \right)
+= - \sum_{k=1}^{K} \frac{1}{k} \sin\left( 2\pi \frac{f_k}{F_s}n \right)
+\]
+
+The \textbf{computational cost} is linear with respect to the \textbf{number of synthesized harmonics} $K$, which increases for low-pitched sawtooth waves (inversely proportional to $f_0$).
+
+The resulting spectrum is ideally clean, given by impulses only, but the cost of that is that the waveform exhibits \textbf{overshoots} (Gibbs phenomenon) and it is \textbf{not perfectly periodic} in DT (due to a non-integer samples/period number).
+
+\begin{figure}[H]
+    \centering 
+    \includegraphics[width=0.6\linewidth]{immaginebho.png}
+    \caption{Sawtooth generated by additive synthesis}
+\end{figure}
+
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Discrete-Time Additive Synthesis}]
+
+In additive synthesis, each digital oscillator generates a sequence of discrete samples - one per time step.
+Although each oscillator produces only one sample at a time, the sum of all oscillators across time produces the full output signal.
+This results in a discrete-time signal.
+
+\end{tcolorbox}
+
+
+\subsubsection{Differentiated Parabolic Wave (DPW)}
+
+A digital signal that closely approximates a sawtooth waveform - while significantly reducing aliasing artifacts - can be obtained by differentiating a \textbf{piecewise parabolic function} $p(t)$:
+
+\[
+p(t) = \int_{-T_0/2}^{t} \tau \ d\tau, \quad t \in \left[ -\frac{T_0}{2}, \frac{T_0}{2} \right] \quad \Rightarrow \quad s(t) = \frac{d p(t)}{dt}
+\]
+
+The resulting signal $s(t)$ resembles a sawtooth, with the difference that the waveforms is \textbf{smoother}: the harmonics decay with a spectral roll-off of $12$ dB/oct (faster decay with respect to $6$ dB/oct roll-off).
+This allows to reduce the aliasing.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{dpw.png}
+    \includegraphics[width=0.5\linewidth]{dpw_oversampled.png}
+    \caption{DPW sawtooth waveform and spectrum - simple (top) and with $2\times$ oversampling (bottom)}
+\end{figure}
+
+\subsubsection{DPW Implementation}
+
+The \textbf{Differentiated Parabolic Waveform (DPW)} is an efficient technique to generate alias-reduced sawtooth waveforms in discrete time.  
+Its implementation can be broken down into four main stages:
+
+\begin{enumerate}
+    \item A trivial sawtooth waveform is generated using a \textbf{bipolar modulo counter};
+    \item The waveform is \textbf{squared} sample by sample, resulting in a parabolic shape;
+    \item The parabolic signal is passed through a \textbf{first-order FIR differentiator} with transfer function:
+    \[
+    D(z) = 1 - z^{-1}
+    \]
+    This filter approximates the DT derivative as difference of consecutive samples;
+    \item Finally, the output is scaled by a \textbf{normalization} factor $c$ to preserve the correct amplitude:
+    \[
+    c = \frac{F_s}{4f(1 - f/F_s)}
+    \]
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{dpw diagram.png}
+    \caption{Block diagram of DPW sawtooth generator}
+\end{figure}
+
+\subsubsection{DT Square Oscillator}
+
+The \textbf{simplest way} to implement a discrete-time \textbf{square waveform} is to sample a continuous-time square wave using the sign of a sine function:
+
+\[
+s(n) = \sign \left[\sin\left( 2 \pi \frac{f_0}{F_s} n \right)\right]
+\]
+
+Its spectrum contains only odd harmonics of the fundamental:
+
+\[
+S(k) = \abs{\mathscr{F} \left\{ s(n) \right\}} = \frac{4}{\pi} \sum_{k=1}^{\infty} \frac{\sin\left[ (2k - 1) \cdot 2\pi \frac{f_0}{F_s} n \right]}{2k - 1}
+\]
+
+
+\subsubsection{DT Triangle Oscillator}
+
+The \textbf{simplest way} to implement a discrete-time \textbf{triangle waveform} is to sample a continuous-time triangle wave using the $\arcsin$ of a sine function:
+
+\[
+s(n) = \frac{2}{\pi} \arcsin \left[ \sin \left( 2\pi \frac{f_0}{F_s} n \right) \right]
+\]
+
+Its spectrum contains only odd harmonics of the fundamental:
+
+\[
+S(k) = \abs{\mathscr{F} \left\{ s(n) \right\}} = \frac{8}{\pi^2} \sum_{k=1}^{\infty} (-1)^{k-1} \frac{\sin\left[ (2k - 1) \ 2\pi \frac{f_0}{F_s} n \right]}{k^2}
+\]
+
+\subsubsection{Source-Filter Modelling}
+
+\textbf{Source-filter modelling} is a classical approach in sound synthesis that dates back to analog techniques.  
+It has been widely used in speech synthesis and coding, as well as in many musical synthesizers.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{source filter modelling.png}
+    \caption{Source-filter block diagram}
+\end{figure}
+
+The \textbf{source} that provides the excitation signal is typically an oscillator.
+The \textbf{filter} is a \textit{black box} that acts as a shaping filter.
+Both source and filter are controlled by \textbf{time-varying parameters} to produce dynamic and expressive sounds.
+
+\subsubsection{Resonant Filters}
+
+\textbf{Resonant filters} emphasize a narrow band of frequencies and are widely used in source-filter modelling.
+They are typically implemented as \textbf{second-order IIR filters}, whose transfer function is:
+
+\[
+H(z) = \frac{b_0}{1 + a_1 z^{-1} + a_2 z^{-2}} = \frac{b_0}{(1 - r e^{j \omega_c} z^{-1})(1 - r e^{-j \omega_c} z^{-1})}=
+\frac{b_0}{(1 - \tau_{p,1} z^{-1})(1 - \tau_{p,2} z^{-1})}, \qquad \tau_{p,1,2} = r e^{\pm j \omega_c}
+\]
+
+The poles $ \tau_p $ are complex conjugates and must lie inside the unit circle to guarantee stability (i.e. $ r < 1 $).
+The corresponding impulse response is:
+
+\[
+h(n) = \frac{b_0 r^n \sin\left( \omega_c (n + 1) \right)}{\sin(\omega_c)} u(n), \qquad u(n): \text{step function}
+\]
+
+The filter is given by a damped sinusoid, causal and exponentially decaying over time.
+We may notice some properties:
+
+\begin{itemize}
+    \item The resonance becomes sharper as $ r \to 1 $;
+    \item The resonance is located near the frequency $ \omega_c $;
+    \item The filter coefficients are defined as:
+    \[
+    \begin{cases}
+    a_1 &= -2r \cos(\omega_c) \\
+    a_2 &= r^2 \\
+    b_0 &= (1 - r^2) \sin^2(\omega_c)
+    \end{cases}
+    \]
+    \item The gain coefficient $ b_0 $ is chosen such that $ |H(e^{\pm j \omega_c})| = 1 $
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{resonant filters.png}
+    \caption{Impulse response of the resonant filter}
+
+\end{figure}
+
+
+\subsubsection{Subtractive Synthesis}
+
+The idea behind \textbf{subtractive synthesis}
+is to define a sound impoverishing richer signals, usually by subtraction with other signals.
+
+One example is the \textbf{Wheatstone’s speaking machine}, built on the second half of the 19th century, which is based on Kratzenstein’s early experiments (1779) and on Von Kempelen’s desing (1791).
+Another example is the \textbf{Riesz’s speaking machine}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{speaking machine.png}
+    \includegraphics[width=0.4\linewidth]{speaking machine intern.png}
+    \caption{Speaking machines (1779-1791) - Wheatstone's (left) and Riesz’s design (right)}
+\end{figure}
+
+The last example is the so-called \textbf{Voder}, which was used in 1939 at New York World Fair and to reproduce the voice of the train in Disney's animated movie "Dumbo":
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{voder_1.png}
+    \includegraphics[width=0.35\linewidth]{voder_2.png}
+    \caption{Voder (left), controls manipulated by operator (right)}
+\end{figure}
+
+\subsection{Non-linear Modelling}
+
+\textbf{Non-linearity} is a characteristic of many real systems, which sometimes makes them more appreciable - like in vinyl reproduction (magnet transduction): the resulting sound seems \textit{warmer} to the listener.
+Some musical instruments - or in general audio equipment - are known in history for their specific non-linearity qualities - like the Fender Rhodes electric piano - may it be in the sound generation or processing.
+
+While \textbf{linear time-invariant (LTI) systems} - such as standard filters - can only affect the \textit{magnitude} and \textit{phase} of \textbf{existing} spectral components, they are not capable of creating new ones or significantly altering the spectral structure of a sound.  
+
+To achieve more radical transformations - such as producing shifting frequencies, new harmonics, enriching the timbre, or emulating real-world non-linear systems - we need to resort to \textbf{non-linear (NL)} trasformations.
+Non-linear mappings can dramatically change the nature of a sound:
+
+\begin{itemize}
+    \item \textbf{Spectral enrichment:} enhances brightness and extends the spectral bandwidth;
+    \item \textbf{Sound improvement/conditioning:} approximates non-linearities found in real systems (i.e. tube amplifiers);
+    \item \textbf{Spectral shift:} modifies the harmonic relationships between spectral components, often via modulation techniques (i.e. translation of harmonics system with ring modulation);
+    \item \textbf{Complexity:} generates both harmonic and inharmonic structures starting from simple waveforms.
+\end{itemize}
+
+\subsubsection{Harmonic Distortion}
+
+\textbf{Harmonic distortion} is a phenomenon in which a non-linear system generates new harmonic content of an input signal, obtaining a spectrally richer signal.
+While in some contexts distortion is undesirable (i.e. radio systems), in audio synthesis it is often used creatively to enrich the timbre of a sound.
+
+For a simple sinusoidal input $ x(n) $ fed into a NL filter, the resulting output $ y(n) $ will have new frequency components at integer multiples of the fundamental $\omega_0$ (i.e. harmonics):
+
+\[
+x(n) = A \cos(\omega_0 n) \quad \Rightarrow \quad
+y(n) = \sum_{k=1}^{N} A_k \cos(\omega_k n), \qquad \omega_k = k \omega_0: \text{\textit{k}-th harmonic}
+\]
+
+To assess the \textbf{spectral impact} of such non-linear processing upon the input, we typically rely on quantitative spectral metrics.
+A common metric is the \textbf{Total Harmonic Distortion (THD)}, which expresses the proportion of energy in the new harmonic components with respect to the total harmonic content:
+
+\[
+\text{THD} = \sqrt{ \frac{ \sum_{k=2}^{N} A_k^2 }{ \sum_{k=1}^{N} A_k^2 } }
+\]
+
+In musical applications, a moderate amount of harmonic distortion can enhance the richness and character of a sound.
+However, controlling it is crucial to avoid unpleasant or overly harsh results.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Nonlinear output.png}
+    \caption{Input (dashed) and output (solid) of a non-linear system}
+\end{figure}
+
+\subsubsection{Waveshaping}
+
+Changing the point of view from frequency to time domain, we may use NL systems to change the waveform shape (i.e. \textbf{waveshaping}).
+Such synthesis is a \textbf{memoryless} NL system - the output $y(n)$ at sample $ n $ depends on the current input sample $ x(n) $ only, not on past or future samples - and apply a static \textbf{distortion function} $F$ to each input sample independently:
+
+\[
+y(n) = F(x(n)), \qquad F : \mathbb{R} \rightarrow \mathbb{R}
+\]
+
+This simple form is often used in \textbf{audio distortion effects}, where the input waveform is transformed instantaneously by the non-linear function.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{Waveshaping.png}
+    \caption{Waveshaping block diagram}
+\end{figure}
+
+To better understand how harmonic distortion affects a signal, let us consider the truncated Taylor series of the distortion function:
+
+\[
+y(n) = F(x(n)) = \sum_{i=0}^{N} a_i x^i(n)
+\]
+
+The quadratic term $a_2 x^2(n)$ is significantly important: when a simple sinusoidal input x(n) has frequency $\omega_0$, the quadratic term \(x^2(n)\) hasfrequency component at $2 \omega_0$: the \textbf{square} operation \textbf{doubles} the input spectrum bandwidth.
+More generally, non-linear operations increase the bandwidth of the signal, as higher-order terms generate additional harmonics.
+
+
+\subsubsection{Musical Effects}
+
+Analog effects based on vacuum tubes or solid-state devices are commonly used to shape guitar sounds, using the \textbf{non-linearity} of such devices.
+Two common musical effects based on NL systems are overdrive and distortion.
+
+\textbf{Overdrive} refers to a process that is \textit{nearly linear for normal input levels}: it becomes non-linear as the input dynamics increase, pushing the system beyond its linear range.
+This results in a warm, slightly compressed sound.
+
+\textbf{Distortion}, on the other hand, indicates a \textit{truly non-linear process}, where the signal is altered regardlessly of input level: that produces a more aggressive and harmonically rich sound.
+
+In the following, we explore some NL functions that are commonly used to implement these effects.
+
+\subsubsection{Symmetric and Asymmetric Distortion}
+
+\textbf{Symmetric distortion} is typically implemented using \textbf{odd non-linear functions}, which generate primarily odd harmonics.  
+These functions behave \textit{approximately linearly} for low-level inputs, while they \textit{saturate} as the input dynamics increase.
+
+A common \textbf{overdrive} function is defined as:
+\[
+F(x) =
+\begin{cases}
+2x & 0 \leq |x| \leq \frac{1}{3} \\
+\sign(x) \cdot \frac{3 - (2 - 3|x|)^2}{3} & \frac{1}{3} < |x| \leq \frac{2}{3} \\
+\sign(x) & \frac{2}{3} < |x| \leq 1
+\end{cases}
+\]
+This shape allows smooth saturation while preserving continuity and symmetry.
+
+A more aggressive and non-linear shaping, like the \textbf{distortion}, can be obtained with an exponential clipping function:
+
+\[
+F(x) = \sign(x) \left( 1 - e^{-q|x|} \right)
+\]
+
+The parameter \( q \) controls the sharpness of the clipping: larger values lead to more abrupt saturation and stronger harmonic generation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.38\linewidth]{Symmetric distortion.png}
+    \caption{Symmetric distortions - overdrive and distortion guitar effects ($q=6$)}
+\end{figure}
+
+\textbf{Asymmetric distortion} mimics the behaviour of analog devices - such as triode tubes - where the waveform is not treated symmetrically: positive and negative amplitude values are mapped differently, which leads to the generation of both \textbf{even and odd harmonics}.
+
+A typical non-linear function used to describe this behaviour is:
+
+\[
+F(x) = \frac{x - q}{1 - e^{-d(x - q)}} + \frac{q}{1 - e^{dq}}
+\]
+
+The parameter \( q \) sets the range of linear behaviour (acts as a threshold), while the parameter \( d \) controls the smoothness of the transition from linear to clipped response.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{Asymmetric distortion.png}
+    \caption{Asymmetric distortion ($q=-0.2$, $d=8$)}
+\end{figure}
+
+Unlike symmetric distortion, the curve is no longer mirrored around the origin, which justifies the presence of both even and odd harmonics.
+
+
+\subsubsection{Multiplicative Synthesis}
+
+\textbf{Multiplicative synthesis}, also known as \textbf{ring modulation}, was explored extensively around 30 years ago and is still used today, although with limited success.
+It consists in the multiplication of two signals in time - which corresponds to a convolution in frequency.
+The resulting signal \( s(n) \) is:
+
+\[
+s(n) = x_1(n) \ x_2(n) \quad \Rightarrow \quad S(\omega) = \left[ X_1 * X_2 \right](\omega)
+\]
+
+This operation generates sum and difference frequencies, enriching the spectral content of the signal.
+Typically, \( x_1(n) \) is a sinusoidal signal of frequency $\omega_c$ known as \textbf{carrier}, while \( x_2(n) \) is called \textbf{modulating signal}:
+
+\[
+\begin{cases}
+x_1(n) = c(n) = \cos(\omega_c n + \phi_c) \\
+x_2(n) = m(n)    
+\end{cases}
+\quad \Rightarrow \quad S(\omega) = \frac{1}{2} \left[ M(\omega - \omega_c) \ e^{j\phi_c} + M(\omega + \omega_c) \ e^{-j\phi_c} \right]
+\]
+
+This operation shifts the spectrum $M(\omega)$ of the modulating signal around the carrier frequency \( \omega_c \) (and $-\omega_c$), enriching the harmonic content and creating new frequency components.
+The spectrum \( S(\omega) \) resulting from multiplicative synthesis is composed of two mirrored components: \textbf{Upper Side Band (USB)} (in positive frequency axis) and \textbf{Lower Side Band (LSB)} (mirrored in negative frequency axis).
+
+If \( M(\omega) \) bandwidth extends beyond the carrier frequency \( \omega_c \), part of the USB overlaps in the negative frequency region with a portion of LSB (and viceversa).
+This phenomenon leads to \textbf{aliasing}, which distorts the resulting signal introducing undesired frequency components.
+
+For example, let us consider a sinusoidal carrier $c(n)$ and a periodic modulating signal $m(n)$ composed of $N$ harmonics of the fundamental $\omega_m$:
+
+\[
+c(n) = \cos(\omega_c n + \phi_c), \quad m(n) = \sum_{k=1}^{N} b_k \cos(k \omega_m n + \phi_k)
+\]
+
+Multiplicative synthesis causes each modulating harmonic $k\omega_m$ to generate two new components: one at \( \omega_c - k \omega_m \) (toward decreasing frequencies) and one at \( \omega_c + k \omega_m \) (toward increasing frequencies).
+The resulting signal is:
+
+\[
+s(n) = \sum_{k=1}^{N} \frac{b_k}{2} \left( \cos \left[(\omega_c + k \omega_m) n + \phi_c + \phi_k \right] + \cos \left[(\omega_c - k \omega_m) n + \phi_c - \phi_k \right] \right)
+\]
+
+\textbf{Aliasing} occurs whenever the modulating signal contains harmonics \( k \omega_m \) such that \( \omega_c - k \omega_m < 0 \): the resulting frequency components become negative.
+Since \textbf{real signals} cannot have negative frequencies, these components are reflected around zero, folding into the positive frequency axis with altered meaning.
+
+The output spectrum components are located at:
+\[
+|\omega_c \pm k \omega_m|, \quad k = 1, \dots, N
+\]
+
+The aliasing condition $\omega_c - k \omega_m < 0$ is equivalent to the case of modulating signal with bandwidth that exceeds the carrier frequency.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Periodic vs Aperiodic Spectra in Multiplicative Synthesis}]
+The spectral nature of the output signal depends on the ratio between carrier and modulator frequencies.
+
+\textbf{Periodic case:} if \( \omega_c / \omega_m = N_1 / N_2 \) is \textit{rational} - \( N_1, N_2 \in \mathbb{N} \) relatively prime - the resulting spectrum is \textit{harmonic} and \textit{periodic}.  
+All frequency components are integer multiples of a fundamental frequency:
+
+\[
+\omega_0 = \frac{\omega_c}{N_1} = \frac{\omega_m}{N_2}
+\]
+
+\textbf{Aperiodic case:} if \( \omega_c / \omega_m \) is \textit{irrational}, the output results \textit{inharmonic}.  
+Partials do not align on a common harmonic grid and the signal does not repeat over time.
+
+\textbf{Almost-periodic case:} if \( \omega_c / \omega_m = \frac{N_1}{N_2} + \varepsilon \), with \( \varepsilon \ll 1 \), the result is a \textit{slightly inharmonic} signal.
+It is nearly periodic, with approximated fundamental:
+\[
+\omega_0 \approx \frac{\omega_m}{N_2}
+\]
+\end{tcolorbox}
+
+
+\subsubsection{Amplitude and Frequency Modulation}
+
+\textbf{Amplitude modulation (AM)} is a variation of multiplicative synthesis in which the modulating signal affects the \textbf{amplitude} of the \textbf{carrier signal}, rather than directly multiplying it. In its basic form, the signal is defined as:
+
+\[
+s(n) = \left[1 + \alpha \ m(n)\right] c(n), \qquad c(n): \text{carrier signal}, \quad m(n): \text{modulating signal}, \quad \alpha: \text{scaling factor}
+\]
+
+The scaling factor $\alpha$ controls the depth of modulation - the amplitude of the sidebands (i.e. the spectrum components around the carrier frequency) with respect to the carrier amplitude.
+The resulting spectrum contains both sidebands and original carrier component:
+
+\[
+S(\omega) = C(\omega) + \frac{\alpha}{2} \left[ M(\omega - \omega_c) \ e^{j \phi_c} + M(\omega + \omega_c) \ e^{-j \phi_c} \right]
+\]
+
+The spectrum also contains the carrier spectral line $ C(\omega) $ - this is crucial for radio functionalities, since it allows the receiver to synchronize and demodulate the signal properly.
+
+\textbf{Frequency Modulation (FM)} synthesis is not derived from physical or perceptual models of sound. Instead, it is a mathematical approach based on modulating the frequency of a carrier signal with another signal.
+
+The \textbf{advantages} of FM are:
+
+\begin{itemize}
+    \item \textbf{Versatility}: allows the creation of a wide variety of sounds, from harmonic tones to rich inharmonic textures.
+    \item \textbf{Efficiency}: requires only a few parameters to control the synthesis process.
+    \item \textbf{Low computational cost}: suitable for real-time audio applications.
+    \item \textbf{Parametric control}: allows continuous variation and automation of timbral features.
+\end{itemize}
+
+The \textbf{disadvantages} of FM are:
+
+\begin{itemize}
+    \item \textbf{Not} well-suited for \textbf{synthesis-by-analysis}: parameters are difficult to derive from real-world or recorded sounds.
+    \item \textbf{Control parameters} (i.e. modulation index, frequency ratios, ...) may not be intuitive for musicians or sound designers.
+\end{itemize}
+
+A \textbf{FM oscillator} produces a signal by modulating the frequency of a carrier waveform:
+
+\[
+s(n) = a(n) \cdot \sin \left(\omega_c(n)n + \phi(n) \right), \qquad
+\begin{cases}
+a(n): & \text{amplitude signal (control rate)} \\
+\omega_c(n): & \text{carrier frequency (control rate)} \\
+\phi(n): & \text{modulating signal (audio rate)}
+\end{cases}
+\]
+
+The term \( a(n) \) controls the amplitude envelope of the output signal, allowing dynamic shaping over time (i.e. attack or decay).  
+The term \( \omega_c(n) \) defines the instantaneous carrier frequency.  
+The term \( \phi(n) \) introduces phase changes responsible for the resulting rich harmonic content.
+
+In order to define a \textbf{digital implementation}, we use an \textbf{iterative form}:
+
+\[
+\begin{cases}
+\varphi(n) = \varphi(n-1) + \omega_c(n) \ n + \phi(n) \\
+y(n) = a(n) \cdot \sin \left( \varphi(n) \right)
+\end{cases}, \qquad
+\varphi(n): \text{instantaneous phase of the FM module}
+\]
+
+% \begin{tcolorbox}[colback=gray!10, colframe=black, title=\textcolor{white}{\textbf{Differences between AM and FM}}]
+
+% \begin{minipage}{0.48\textwidth}
+% \textbf{Amplitude Modulation (AM):}
+% \begin{itemize}
+%     \item Amplitude of the carrier changes.
+%     \item Frequency and phase remain constant.
+%     \item More susceptible to noise.
+%     \item Simple demodulation.
+% \end{itemize}
+% \end{minipage}
+% \hfill
+% \begin{minipage}{0.48\textwidth}
+% \textbf{Frequency Modulation (FM):}
+% \begin{itemize}
+%     \item Frequency of the carrier changes.
+%     \item Amplitude may remain constant.
+%     \item Better noise immunity.
+%     \item More complex demodulation.
+% \end{itemize}
+% \end{minipage}
+
+% \centering
+% \includegraphics[width=0.5\linewidth]{immagine.png}
+
+% \smallskip
+% \centering
+
+% \end{tcolorbox}
+
+\subsubsection{Sinusoidal Modulation}
+
+When the \textbf{modulating signal} $\phi$ is \textbf{sinusoidal}:
+
+\[
+\phi(n) = I(n) \sin(\omega_m(n)n) 
+\]
+
+The signal resulting from the FM is:
+
+\[
+s(n) = a(n) \sin\left[\omega_c(n)n + I(n) \sin(\omega_m(n)n)\right] = a(n) \sum_{k=-\infty}^{\infty} J_k(I(n)) \sin\left[(\omega_c(n) + k\omega_m(n))n\right]
+\]
+
+This expansion confirms that FM synthesis generates an \textbf{infinite number of spectral components} located at frequencies \( \abs{\omega_c \pm k\omega_m} \).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.25\linewidth]{FM scheme.png}
+    \caption{ Basic FM scheme}
+\end{figure}
+
+The function \( J_k(I(n)) \) is the \textbf{Bessel function} of the \textbf{first kind} and \textbf{order} \( k \).
+The term \( I(n) \) is a  \textbf{modulation index} that controls the distribution of energy across these components: as \( I(n) \) increases, more sidebands appear, effectively broadening the spectrum.
+Conversely, reducing \( I(n) \) limits the number of audible components - producing an effect similar to low-pass filtering.
+
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Effect of Sinusoidal FM}]
+
+\begin{minipage}{0.48\textwidth}
+\textbf{Spectral Characteristics:}
+\begin{itemize}
+    \item Produces multiple frequency components around the carrier.
+    \item Components are located at \( \omega_c \pm k\omega_m \).
+    \item The amplitude of each component is given by \( J_k(I(n)) \).
+    \item The spectrum is theoretically infinite.
+\end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\textbf{Perceptual and Practical Effects:}
+\begin{itemize}
+    \item Increasing \( I(n) \) adds more sidebands → richer timbre.
+    \item Decreasing \( I(n) \) reduces harmonics → smoother and simpler tone.
+    \item For low \( I(n) \), spectrum behaves like a low-pass filter.
+\end{itemize}
+\end{minipage}
+\end{tcolorbox}
+
+
+
+\subsubsection{Compound Modulation}
+
+In \textbf{compound modulation}, the modulating signal is made up of multiple sinusoidal components: we sum \( N \) different sinusoids, each with its own frequency \( \omega_{m,i}(n) \) and modulation index \( I_i(n) \).
+The modulating signal $\phi$ and the resulting signal $s$ are:
+
+\[
+\phi(n) = \sum_{i=1}^{N} I_i(n) \sin(\omega_{m,i}(n)n) \quad \Rightarrow \quad s(n) = a(n) \cdot \sin \left[ \omega_c(n) \ n + \sum_{i=1}^{N} I_i(n) \cdot \sin(\omega_{m,i}(n) \ n) \right]
+\]
+
+We may expand the resulting signal using Bessel functions into a sum of sinusoids at all possible combinations of the modulation frequencies:
+
+\[
+s(n) = a(n) \sum_{k_1= -\infty}^{\infty} \cdots \sum_{k_N = -\infty}^{\infty} \left( \prod_{i=1}^{N} J_{k_i}(I_i(n)) \right) \sin \left[ \left( \omega_c(n) + \sum_{i=1}^{N} k_i \omega_{m,i}(n) \right) n \right]
+\]
+
+Compound modulation produces a \textbf{complex} and \textbf{colourful spectrum}, with frequency components given by combinations of the modulation frequencies.
+The strength of each component is controlled by Bessel functions, leading to lively and evolving timbres.
+
+The ratios between the modulating frequencies $\omega_{m,i}$ determine the harmonicity of the resulting sound: \textbf{rational} values describe \textbf{slightly inharmonic} spectra, while \textbf{irrational} values result in more and more \textbf{inharmonic} spectra.
+
+The capability of describing both harmonic and inharmonic sounds makes the compound modulation especially suitable for acoustic phenomena simulation - like in \textbf{piano sound synthesis}, where inharmonicity of the lower strings occurs due to stiffness (simulated using high values of $I_i(n)$ for the lowest notes).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\linewidth]{Compound modulation.png}
+    \caption{Compound modulation scheme}
+\end{figure}
+
+\subsubsection{Nested Modulation}
+
+In the \textbf{nested modulation}, the structure becomes more intricate: a sinusoidal modulator is itself modulated by another.
+This creates a \textbf{cascade of modulation stages}, where the frequency deviation introduced by the first modulator is dynamically shaped by a second one.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\linewidth]{Nested modulation.png}
+    \caption{Nested modulation scheme}
+\end{figure}
+
+This setup results in a spectral structure similar to compound modulation with two modulators, but typically with \textbf{increased bandwidth}. The nesting process introduces additional sidebands and \textbf{enhances} the \textbf{richness} of the resulting timbre, making it well suited for \textbf{complex} or \textbf{metallic sounds}.
+
+\subsubsection{Feedback Modulation}
+
+An even more unconventional approach is \textbf{feedback modulation}: the modulating signal is not a separate oscillator, but rather the \textbf{past value} of the \textbf{output signal}.
+In this configuration, the modulation signal $\phi$ (\textbf{feedback} of the system and delayed by one sample) and the resulting signal $s$ are:
+
+\[
+\phi(n) = \beta \ s(n-1) \quad \Rightarrow \quad s(n) = a(n) \cdot \sin\left[ \omega_c(n)n + \beta \ s(n-1) \right]
+\]
+
+The parameter \( \beta \) is a \textbf{gain factor} that controls the strength of the feedback.
+As \( \beta \) increases, the output becomes \textbf{richer} in harmonics, while still retaining the same fundamental frequency \( \omega_c \).
+In the limit case, the waveform \textbf{smoothly transforms} from a pure sinusoid to a waveform that closely resembles a sawtooth wave.
+
+This method is particularly interesting because of its \textbf{simplicity}: we can achieve a wide range of timbral variations with only one oscillator, just by varying the feedback gain.
+It is a powerful technique to create \textbf{non-linear harmonic complexity} without requiring multiple modulating signals.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.15\linewidth]{Feedback modulation.png}
+    \caption{Feedback modulation scheme (delay $n_0 \geq 1$ samples)}
+\end{figure}
+
+\subsection{Wavetable Sampling Synthesis}
+
+\textbf{Wavetable sampling synthesis} is an extension of the concept of the \textit{wavetable oscillator} - originally developed to generate sinusoidal waveforms efficiently, without evaluating trigonometric functions.
+This technique is now applied to \textbf{non-sinusoidal waveforms}, with wavetables that \textbf{store} one or more \textbf{periods} of complex audio signals.
+
+For example, in a piano, striking a key quickly produces a brighter sound with more harmonics, compared to pressing it softly.
+To reproduce this behaviour realistically, we could record different samples for each playing style and for each octave.
+In addition, to simulate the double decay characteristic of grand pianos, multiple mechanical mechanisms come into play.
+Furthermore, different samples could be recorded for various pedal positions, capturing the subtle changes in tone and resonance.
+
+This synthesis method makes it possible to create realistic and expressive sounds by using recorded audio and connecting it to how a performer plays. 
+The process usually involves a few main steps:
+\begin{itemize}
+    \item \textbf{Attack playback:} the beginning part of the sound (i.e. when a note is hit) is played using a \textbf{direct recording}, because it is the most unique and dynamic part.
+    
+    \item \textbf{Looped sustain:} a selection of periods of the \textbf{sustain} (i.e. the steady part of the sound) is saved and played back in a continuous \textbf{loop}. The pitch is controlled by changing the speed of playback.
+    
+    \item \textbf{Key splits:} to cover the entire keyboard, the instrument is divided into \textbf{splits} - groups of contiguos notes that share one recorded sample. That sample is then transposed to fit the pitch of each key.
+\end{itemize}
+
+
+
+Different \textbf{dynamic levels} can also be simulated using two main strategies: either by sampling the instrument at several dynamic intensities and interpolating between them, or by recording only loud dynamics (i.e. \textit{fortissimo}) and applying \textbf{dynamic filtering} - typically low-pass filters - to generate quieter variants. 
+
+To create natural and expressive sounds, \textbf{control signals} are very important in wavetable sampling synthesis. These signals follow the way a musical gesture changes over time, so they move more slowly than audio signals.
+While audio signals work at high speed to produce the sound itself, control signals run at a slower \textbf{control rate}, which is enough to shape how a sound behaves. This control rate is used to adjust things like:
+
+\begin{itemize}
+    \item \textbf{Envelopes} - such as \textit{Attack-Decay-Sustain-Release (ADSR)} - which control how the volume of a note changes over time;
+    \item \textbf{Low-Frequency Oscillators (LFOs)}, which add slow effects like \textit{vibrato} (pitch variation) or \textit{tremolo} (volume variation);
+    \item \textbf{Filter control}, which changes the sound’s brightness or colour depending on how the note is played.
+\end{itemize}
+
+These slowly changing signals make the sound more detailed and expressive, helping to imitate the natural feel of acoustic instruments.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.42 \linewidth]{Mellotron.png}
+    \includegraphics[width=0.3\linewidth]{Mellotron_2.png}
+    \caption{Mellotron inside (left) and out (right)}
+\end{figure}
+
+\subsubsection{Granular Synthesis}
+
+\textbf{Granular synthesis} is a powerful technique in which a \textbf{complex} and \textbf{dynamic acoustic event} is constructed by combining a large number of small sound segments known as \textbf{grains} - making a sequence using windowing mechanisms to attach frame to frame, which may overlap in time.
+These grains are typically very short (ranging from a few milliseconds to tens of milliseconds) and their \textbf{individual features} - such as duration, pitch, amplitude and envelope - along with their \textbf{temporal distribution} across time, collectively define the resulting sound’s \textbf{timbre} and texture.
+
+This concept is closely related to the \textbf{cinema paradigm}, where a rapid succession of static images creates the \textit{illusion of motion}.
+Similarly, the succession of acoustic grains gives rise to evolving and continuous sounds.
+
+The origins of this idea can be traced back to the work of \textbf{Dennis Gabor}, who proposed that a sound signal can be decomposed into a sum of elementary sinusoids windowed by Gaussian functions and shifted in time and frequency.
+These units, which he called \textbf{acoustic quanta}, represent the smallest meaningful components of a signal in both time and frequency.
+Mathematically, a signal \( x \) can be expressed, based on Gabor's transform, as:
+
+\[
+x(t) = \sum_m \sum_k a_{mk} \cdot g_{mk}(t), \quad g_{mk}(t) = g(t - m\alpha T)\ e^{jk\beta \Omega t}, \qquad \Omega T = 2\pi, \quad \alpha \beta \leq 1
+\]
+
+To describe any time and frequency, we define time shifts \( m\alpha T \) and frequency shifts \( k\beta \Omega \).
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Sound Granulation}]
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 1.3cm]
+    \tikzstyle{block} = [rectangle, draw=black, fill=gray!15,
+        text centered, text width=4cm, minimum height=2.8em, rounded corners]
+    \tikzstyle{arrow} = [thick, ->, >=stealth]
+
+    \node[block] (bc) {\textbf{Basic concept}};
+    \node[block, right=of bc, text width=5cm] (sg) {\textbf{Sonic grains} \\ \smallskip
+        \begin{itemize}[leftmargin=*, nosep]
+            \item Synthesis
+            \item Sound processing
+        \end{itemize}};
+    
+    \draw[arrow] (bc) -- (sg);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.5em}
+Granular synthesis constructs sound by assembling a large number of small acoustic events called \textit{grains}. Each grain typically lasts from 1 ms to 100 ms, which corresponds to the minimal temporal resolution needed for the human ear to distinguish variations in pitch, loudness and duration.
+\end{tcolorbox}
+
+There are two main approaches to implement granular synthesis:
+
+\begin{enumerate}
+    \item \textbf{Sampling-based synthesis}: uses \textbf{sampled sounds} - complex waveforms either recorded from real instruments or defined spectrally - which are split into short grains and then recombined using techniques like Overlap-And-Add (OLA);
+
+    \item \textbf{Abstract (synthetic) synthesis}: the grains are \textbf{generated algorithmically}, without using any pre-recorded sound. Parameters such as frequency, amplitude, duration and envelope shape are controlled mathematically -  allowing for the \textit{creation of entirely new and experimental textures}.
+\end{enumerate}
+
+In granular synthesis, each grain is defined by parameters such as waveform, amplitude and timing:
+\[
+s_g(n) = \sum_k a_k \cdot g_k(n-l_k)
+\]
+More advanced models also control envelope shape, spectral content and sample position.
+As more parameters are added, the amount of control data increases rapidly - similar to the complexity found in additive synthesis.
+
+\begin{tcolorbox}[colback=gray!10, colframe=black, title=\textbf{Sound Granulation Control Parameters}]
+\begin{center}
+\begin{tikzpicture}[node distance=1.2cm and 1cm]
+    \tikzstyle{block} = [rectangle, draw=black, fill=gray!10,
+        text centered, text width=4.2cm, minimum height=3em, rounded corners]
+    \tikzstyle{arrow} = [thick, ->, >=stealth]
+
+    \node[block] (1) {Parameters of\\ one grain};
+    \node[block, right=of 1] (2) {
+        \begin{itemize}[leftmargin=0.8em]
+            \item[] \textbullet{} Grain duration
+            \item[] \textbullet{} Amplitude envelope\\ type and shape
+            \item[] \textbullet{} Frequency and\\ spectral content
+            \item[] \textbullet{} Reading position in\\ soundfile
+        \end{itemize}};
+    \node[block, right=of 2] (3) {Explosion in amount of\\ control data\\ (as in additive synthesis)};
+    
+    \draw[arrow] (1) -- (2);
+    \draw[arrow] (2) -- (3);
+\end{tikzpicture}
+\end{center}
+\end{tcolorbox}
+
+\subsubsection{Granulation}
+
+In additive synthesis, the organization of frequencies is essential to shaping the final sound.
+In granular synthesis, however, the \textbf{temporal organization of the grains} is critical: misaligned or poorly timed grains can introduce \textbf{discontinuities}.
+
+When creating \textbf{stochastic time-varying components}, the main goal is to make them sound as realistic as possible.
+In this case, we focus more on the overall \textbf{spectral envelope} - the general shape of the sound frequency content - rather than on individual harmonics.
+A common technique used here is the \textbf{Overlap-And-Add (OLA)} method, where the frames are added together along time.
+This process is known as \textbf{sound granulation} and allows us to transform recorded sounds in creative ways by:
+
+\begin{itemize}
+    \item Choosing short pieces (grains) from the original sound;
+    \item Applying amplitude envelope to each grain before combining them.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{Granulation.png}
+    \caption{Granulation}
+\end{figure}
+
+\subsubsection{High-level Organization}
+
+At a structural level, granular synthesis can be organized in different ways, depending on how \textit{grains} are \textit{placed} and \textit{controlled} in time and frequency.
+Some common methods include:
+
+\begin{itemize}
+    \item \textbf{Fourier and wavelet grids}: grains are arranged on a fixed grid - like small blocks in time and frequency. This method is good for analysis and re-synthesis, where we want stable and predictable frequency control;
+
+    \item \textbf{Pitch-Synchronous Overlapping Streams (PSGS)}: grains follow the pitch or periodicity of the input sound. This allows for very smooth transitions between grains. Techniques like SOLA and PSOLA (\textit{refer to DAAP module}) use this idea to stretch in time or shift in pitch without creating noticeable glitches;
+
+    \item \textbf{Asynchronous Grain Clouds (AGS)}: grains are scattered more randomly, creating a \textit{cloud} of tiny sounds. Instead of focusing on each grain, we control the overall density and randomness. This is useful for creating complex textures or natural and noisy sounds;
+
+    \item \textbf{Time-granulated or sampled-sound streams}: uses actual recorded audio or short samples: the grains are cut from these recordings and rearranged in time. The focus is more on timing and rhythm rather than fine control of synthesis parameters.
+\end{itemize}
+
+\subsubsection{Asynchronous Granular Synthesis}
+
+\textbf{Asynchronous granular synthesis} distributes grains randomly in the time-frequency plane, without aligning them to a periodic structure. 
+We consider two main cases:
+
+\begin{itemize}
+    \item \textbf{With mask}: grains are scattered within a defined region, allowing control over density and placement;
+    \item \textbf{Without mask}: grains are distributed freely, resulting in more irregular and noisy textures.
+\end{itemize}
+
+The result is a time-varying cloud of micro-sounds, a sonic texture.
+This approach is useful for modelling natural or stochastic sounds, where overall statistical properties are more relevant than precise control.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.37\linewidth]{Async granular.png}
+    \includegraphics[width=0.35\linewidth]{Async granular 2.png}
+    \caption{Asynchronous granular synthesis - random scattering within a mask (left) and with no mask (right)}
+\end{figure}
+
+\clearpage

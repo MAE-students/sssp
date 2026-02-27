@@ -1,0 +1,195 @@
+\section{Sound Field Representations}
+
+\subsection{Introduction}
+
+In acoustics, the \textbf{sound field} can be represented as superposition of basis solution of Helmotz equations, such as plane waves, spherical waves or cylindrical waves.
+Each type of basis soluiton is characterized by a specific set of indipendente variables (propagation direction, radial order, ...) which uniqueky define the waveform.
+The general solution to the wave equation is formed by adding up these basic solution $\phi_n$, each weighted by a specific coefficient $a_n$ (expansion coefficient:
+
+\[
+\Psi(\underline{\mathrm{x}}, t) = \sum_{n} a_n \phi_n(\underline{\mathrm{x}}, t)
+\]
+
+These coefficients define the strength and influence of each wave component, allowing us to describe the complete sound field using a combination of simpler waves.
+
+A \textbf{source-free volume} is a region of space devoid of active sound sources. These volumes can be classified into three main categories:
+\[
+\Psi(\mathbf{x},t) = \sum_{n} a_{n}\,\phi_{n}(\mathbf{x},t) 
+\quad \text{or} \quad 
+\Psi(\mathbf{x},\omega) = \int A(\boldsymbol{\xi},\omega)\,\phi(\mathbf{x};\boldsymbol{\xi},\omega)\, d\boldsymbol{\xi},
+\]
+
+\begin{itemize}
+    \item \textbf{Internal Field:} All sources are located outside the region of interest;
+    \item \textbf{External Field:} Sources are located within the region, but their influence is analysed externally;
+    \item \textbf{Mixture:} For instance, a spherical shell configuration, where some sources are enclosed within a smaller radius and others are situated beyond a larger radius.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{int ext sound fields.png}
+    \caption{Internal and external sound field}
+\end{figure}
+
+
+\subsection{Plane Wave Representations}
+
+Plane waves representation consists in defining a sound field as sum of weighted plane waves.
+Two primary types of plane wave representations are considered in this section.
+
+\textbf{Weyl representation}, derived from the inhomogeneous wave equation, includes both propagating and evanescent waves (not of interest here).
+\textbf{Whittaker representation}, derived from the homogeneous wave equation, considers only propagating plane waves.
+The Whittaker plane wave expansion is a general rapresentation of all \textbf{solution of the homogeneous Helmholtz equation}, which is expressed in cartesian coordinates as:
+
+\[
+p(\underline{r}, \omega) = e^{j \langle \underline{k}, \underline{r} \rangle}, \qquad \underline{k} \in \mathbb{R}^3
+\]
+
+The \textbf{synthesis} of the \textbf{sound field} can be expressed as a multidimensional inverse Fourier transform over the domain $\mathcal{D}$:
+
+\[
+p(\underline{r}, \omega) = \left( \frac{1}{2\pi} \right)^3 \int_{\mathcal{D}} A(\underline{k}) e^{j \langle \underline{k}, \underline{r} \rangle} \  d^3 \underline{k}, \qquad \mathcal{D} = \left\{ \underline{k} \in \mathbb{R}^3 : \| \underline{k} \| = \frac{\omega}{c} \right\}
+\]
+where A(k) encodes the amplitude and phase of each plane wave contribution to the integral.
+An alternative expression in spherical coordinates - over a spherical surface $\mathcal{S}$ - is given by:
+
+\[
+p(\underline{r}, \omega) = \left( \frac{1}{2\pi} \right)^3 \int_{\mathcal{S}} A(\theta, \phi, \omega) e^{j \frac{\omega}{c} \langle \underline{\hat{k}}, \underline{r} \rangle} \sin(\theta) \  d\theta \  d\phi, \qquad \mathcal{S} = \left\{ \theta \in [0, \pi], \phi \in [0, 2\pi] \right\}
+\]
+
+The \textit{unit vector} \( \underline{\hat{k}} \) is expressed as:
+
+\[
+\underline{\hat{k}} = \begin{pmatrix}
+    \sin(\theta) \cos(\phi) \\
+    \sin(\theta) \sin(\phi) \\
+    \cos(\theta)
+\end{pmatrix}
+\]
+
+The function \( A(\theta, \phi, \omega) \) encodes amplitude and phase of each plane wave and is known as the \textbf{Herglotz density}, which is independent of the observation point \( \underline{r} \).
+
+\subsection{Spherical Harmonics Expansion}
+
+A \textbf{basis solution} to the \textbf{Helmholtz equation} in spherical coordinates can be expressed as:
+
+\[ p(\underline{r}, \omega) = R(r) \Theta(\theta) \Phi(\phi) = R(r) Y_l^m(\theta, \phi) \]
+
+The radial component \( R(r) \) can be expressed in two forms:
+
+\[ R(r) = R_1 j_l \left( \frac{\omega}{c} r \right) + R_2 y_l \left( \frac{\omega}{c} r \right) \qquad \text{or} \qquad  R(r) = R_3 h_l^{(1)} \left( \frac{\omega}{c} r \right) + R_4 h_l^{(2)} \left( \frac{\omega}{c} r \right) \]
+
+In the previous expressions, \( j_l(z) \) and \( y_l(z) \) are \textbf{spherical Bessel functions} while \( h_l^{(1)}(z) \) and \( h_l^{(2)}(z) \) are \textbf{spherical Hankel functions} - defined as:
+
+\[ h_l^{(1)}(z) = j_l(z) + j y_l(z), \qquad h_l^{(2)}(z) = j_l(z) - j y_l(z) \]
+
+The following plots are the result of the code script \verb|radialDependency.m|:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\linewidth]{sph bessel.png}
+    \caption{Spherical Bessel functions - first kind (left) and second kind (right)}
+\end{figure}
+
+The following plots are the result of the code script \verb|radialDependency.m|:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hankel.png}
+    \caption{Spherical Hankel functions - real and imaginary parts}
+\end{figure}
+
+The Helmholtz equation solution is expressed by means of \textbf{spherical harmonics} $R(r) Y_l^m(\theta, \phi)$:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{shperical harmonics.png}
+    \caption{Spherical harmonics up to order 3}
+\end{figure}
+
+
+The general \textbf{sound field} can be represented as the \textbf{superposition of spherical harmonic waves}:
+
+\[ p(\underline{r}, \omega) = \sum_{l=0}^{\infty} \sum_{m=-l}^{l} \left( A_{lm}(\omega) h_l^{(1)} \left( \frac{\omega}{c} r \right) + B_{lm}(\omega) h_l^{(2)} \left( \frac{\omega}{c} r \right) \right) Y_l^m(\theta, \phi) \]
+
+Alternatively:
+
+\[ p(\underline{r}, \omega) = \sum_{l=0}^{\infty} \sum_{m=-l}^{l} \left( C_{lm}(\omega) j_l \left( \frac{\omega}{c} r \right) + D_{lm}(\omega) y_l \left( \frac{\omega}{c} r \right) \right) Y_l^m(\theta, \phi) \]
+
+The sound field is completely characterized by the sets of coefficients \( A_{lm}, B_{lm} \) or by the sets of coefficients \( C_{lm}, D_{lm} \).
+
+The choice of coefficients \( A_{lm} \), \( B_{lm} \), \( C_{lm} \) and \( D_{lm} \) is done in order to keep or discard solutions and depends on the location of the sound source and the type of wave behaviour under analysis.
+This determines whether we use \textit{incoming} or \textit{outgoing} wave solutions in the spherical harmonic expansion.
+
+The \textbf{spherical Bessel functions of the first kind} \( j_l\left(z\right) \) and $y_l\left(z\right)$ represent incoming acoustic fields generated by sources far away and observed within the interior region (interior problem).
+
+On the other hand, the \textbf{spherical Hankel functions} \( h_l^{(1)}\left(z\right) \) and \( h_l^{(2)}\left(z\right) \) describe outgoing acoustic field generated by sources close to the origin, observed in the exterior region (exterior problem).
+As \( z \to 0 \), the spherical Hankel function of the second kind diverges $\left(\abs{h_l^{(2)}(z)} \to \infty\right)$.
+Therefore, \( h_l^{(2)}(z) \) is unsuitable for representing interior fields near the origin and is primarily used for exterior problems.
+
+\subsubsection{Internal and External Sound Fields}
+
+The \textbf{internal sound field} can be expressed using the inverse Spherical Harmonics expansion as:
+
+\[
+p(\underline{r}, \omega) = \sum_{l=0}^{\infty} \sum_{m=-l}^{l} C_{lm}(\omega) j_l\left(\frac{\omega}{c} r\right) Y_l^m(\theta, \phi) 
+\]
+
+The Spherical Harmonics expansion (analysis) for the internal sound field is given by:
+
+\[
+C_{lm}(\omega) = \frac{1}{j_l\left(\frac{\omega}{c} r\right)} \int_{0}^{2\pi} \int_{0}^{\pi} p(\underline{r}, \omega) Y_l^{-m}(\theta, \phi) \sin(\theta) \  d\theta \  d\phi 
+\]
+
+For the \textbf{external sound field}, the inverse Spherical Harmonics expansion is defined as:
+
+\[
+p(\underline{r}, \omega) = \sum_{l=0}^{\infty} \sum_{m=-l}^{l} B_{lm}(\omega) h_l^{(2)}\left(\frac{\omega}{c} r\right) Y_l^m(\theta, \phi)
+\]
+
+The corresponding Spherical Harmonics expansion (analysis) for the external sound field is:
+
+\[
+B_{lm}(\omega) = \frac{1}{h_l^{(2)}\left(\frac{\omega}{c} r\right)} \int_{0}^{2\pi} \int_{0}^{\pi} p(\underline{r}, \omega) Y_l^{-m}(\theta, \phi) \sin(\theta) \  d\theta \  d\phi
+\]
+
+\subsubsection{Bandlimited Spherical Harmonics Expansion}
+
+The inverse spherical harmonics expansion can be limited to a finite order \( L - 1 \), resulting in the \textbf{bandlimited expansion}:
+
+\[
+p(\underline{r}, \omega) \approx \sum_{l=0}^{L-1} \sum_{m=-l}^{l} B_{lm}(\omega) \  h_{l}^{(2)}\left(\frac{\omega}{c} r\right) \  Y_{l}^{m}(\theta, \phi)
+\]
+
+This approximation effectively represents the original sound field using \( L^2 \) coefficients. The accuracy of this representation depends on the properties of the spherical Bessel functions \( j_l \), which exhibit distinct behaviours based on their order. 
+Lower orders are more effective in describing the sound field close to the origin, while higher orders capture the field at greater distances. As the order \( l \) increases, the argument \( \left(\frac{\omega}{c}\right) r \) at which the maximum occurs also shifts outward.
+A \textit{practical guideline} for determining the validity of the bandlimited expansion is given by:
+
+\[
+\frac{\omega \cdot  r_{L-1}}{c} < L - 1
+\]
+
+We consider \( r_{L-1} \) as the maximum radius where the expansion remains accurate.
+The validity is inversely proportional to the temporal frequency \( \omega \), showing that \textbf{higher frequencies} require \textbf{more coefficients} to maintain precision.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.24\linewidth]{a.png}
+    \includegraphics[width=0.22\linewidth]{b.png}
+    \includegraphics[width=0.23\linewidth]{c.png}
+    \caption{Effects of bandlimited expansion - ideal field (left) and bandlimited fields with $L=25$ (center) and $L=12$ (right)}
+\end{figure}
+
+\subsection{Cylindrical Harmonics Expansion}
+
+The cylindrical harmonics expansion follows a similar logic, applied to cylindrical coordinates.
+The \textbf{internal sound field} can be expressed as:
+
+\[
+p(\underline{r}, \omega) = \sum_{m=-\infty}^{\infty} \left( \frac{1}{2\pi} \int_{-\infty}^{\infty} C_m(\omega, k_z) \  J_m(k_{\rho} \rho) \  e^{j k_z z} \  dk_z \right) e^{j m \phi}
+\]
+
+This formulation is valid in a cylindrical region around the \( z \)-axis, with a radius \( \rho \) smaller than the distance to the nearest source.
+The expansion leverages the \textbf{Bessel functions} of the first kind \( J_m(k_{\rho} \rho) \), which describe the radial component in cylindrical coordinates.
+
+\clearpage

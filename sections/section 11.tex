@@ -1,0 +1,119 @@
+\section{Spatial Sound with Headphones: Binaural Rendering}
+
+\subsection{Introduction}
+
+When spatial sound is accurately reproduced through headphones, it creates a strong feeling of \emph{immersion}. The listener can clearly perceive the position of people, instruments and environmental sounds around them. These sounds may come from real sources, virtual sources, or a mix of both.
+Immersive audio is not just about realism - it also helps improve how well we understand and locate sounds. This is done by providing natural binaural cues, such as interaural time differences (ITD) and interaural level differences (ILD), which our brain uses to detect where sounds are coming from.
+Immersive communication has applications in teleconferencing and telepresence, in simulated performance venues and in gaming contexts, where it enhances spatial awareness of sound-producing objects and the surrounding environment.
+
+However, several challenges arise, especially in mobile or low-cost scenarios where audio is delivered through a single earpiece or duplicated across two. Without appropriate spatialization, voices are perceived as coming from inside the listener's head, a phenomenon considered unnatural. The simplest solution involves altering balance or applying ITD and ILD cues to create a more externalized perception of sound location.
+
+\textit{Binaural recordings}, which are made using two microphones placed inside a dummy head, provide realistic spatial cues and capture important information about the acoustic environment. 
+However, a key limitation is that these recordings do not adapt to head movements, which can cause confusion between front and back or make it harder to localize sounds. The effectiveness of binaural audio also depends on the listener’s physical characteristics, particularly the shape of the head and ears.
+
+To overcome these limitations, \textit{HRTF filtering} is used. This technique applies personalized transfer functions to each sound source and can include interpolation to simulate head movement. 
+Another approach is \textit{motion-tracked binaural (MTB)} rendering, which samples the sound field at various positions around a real or virtual dummy head and reconstructs the signal at the listener’s position. 
+Both methods allow the spatial audio to respond dynamically to head movements, resulting in a more realistic and accurate  listening experience.
+
+
+\subsection{Binaural Room Impulse Responses (BRIRs)}
+
+HRTFs provide a spatialized listening experience but are typically measured in anechoic conditions, which makes them less suitable for reproducing natural environments. \textbf{BRIRs address this limitation by capturing the impulse response at both ears in real acoustic environments, thus including the effects of early reflections and reverberation, binaural cues and HRTF}.
+
+HRTFs are also used to create virtual acoustic environments, such as those found in computer games or military training simulations. In these applications, each source has a separate audio signal and its spatial location is known. A head tracker continuously updates the listener’s head position and orientation, allowing the system to render sound correctly from all directions. This dynamic rendering allows a more realistic and immersive experience.
+
+% slide 10
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\linewidth]{BRIR left.png}
+    \caption{BRIR at left ear for a small room}
+\end{figure}
+\textbf{A BRIR starts with the HRIR corresponding to the direct sound, followed by early reflections and ends with the diffuse reverberant tail}. \textit{This extended response allows for more realistic sound spatialization and enhances distance perception}.
+However, BRIRs are significantly longer than HRIRs, which increases computational cost. Real-time convolution with BRIRs requires special attention to latency and efficiency, especially in interactive applications.
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{HRTF vs. BRIR}]
+
+\begin{multicols}{2}
+\textbf{HRTF (Head-Related Transfer Function)}
+\begin{itemize}
+    \item Measured in anechoic (reflection-free) environments
+    \item Models only directional filtering by head, pinna and torso
+    \item No room reverberation or reflections
+    \item Valid for general spatialization
+    \item Direction-dependent only
+\end{itemize}
+
+\columnbreak
+
+\textbf{BRIR (Binaural Room Impulse Response)}
+\begin{itemize}
+    \item Measured in real rooms with reflections
+    \item Includes room acoustics (reverberation, echoes)
+    \item Captures full acoustic path: source $\rightarrow$ room $\rightarrow$ listener
+    \item Specific to the environment and positions
+    \item Direction- and environment-dependent
+\end{itemize}
+\end{multicols}
+
+\end{tcolorbox}
+\subsection{Binaural Room Scanning System}
+
+To further improve spatial realism in virtual audio, the \textbf{binaural room scanning system} was introduced. This approach aims \textit{to replicate over headphones the experience of listening to a surround system in an actual room}.
+% slide 13
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{BRS.png}
+    \caption{BRS system}
+\end{figure}
+During acquisition, source signals are played through loudspeakers positioned in the listening room. \textit{BRIRs are then measured at a dummy head placed at the ideal listening position. Multiple BRIRs are acquired for different head orientations, capturing how room acoustics and HRTFs change with head rotation}.
+
+During playback, a head tracker (sensor) continuously monitors the listener’s head orientation. This data is used to control an interpolator, which blends nearby BRIRs to generate smooth, direction-dependent impulse responses for the left and right ears. These responses are then convolved with the audio signals and sent to the headphones. As a result, the sound adapts in real time to head movements, creating a realistic and dynamic spatial audio experience.
+This method, by using head movement, helps correct imperfections in dummy head models - such as differences in ear shape - that can otherwise distort how elevation and direction are perceived.
+
+However, the approach presents challenges \textbf{in implementation}: a large number of long BRIRs must be stored and interpolation errors must be negligible. The system must also avoid introducing detectable latency and headphone transfer functions must be compensated. Finally, computational demands scale with scene complexity - for instance, a single BRIR of 0.5 s (at $F_s = 44.1$ kHz) requires over one gigaflop per second for real-time convolution, which doubles for stereo rendering and increases further with multiple sources.
+% slide 19
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{BRS room.png}
+    \caption{BRS system with simple room model and artificial reverberator}
+\end{figure}
+A practical alternative to using full BRIRs is to \textbf{replace them with shorter HRIRs} and \textbf{combine them with an approximate room model}. In this setup, early reflections are simulated using a discrete image sources, while the reverberation tail is generated by passing the combined source signal through a properly IIR filter.
+This method works well in virtual environments with a single listener. However, it is not suitable for recording or reproducing complex, natural acoustic scenes. In such cases, it would be difficult to isolate each individual sound source and determine its position. Additionally, accurately modelling all reflections and reverberation in a real room would require significant computational resources.
+
+\subsection{Motion-Tracked Binaural}
+
+
+An alternative to HRTF and BRIR models is offered by \textbf{Microphone Transfer Function-Based (MTB) systems}. In this approach, \textbf{array microphones are mounted along the diameter of a sphere} or a cylinder roughly the size of a human head. A head tracker is used to control interpolation, so that the microphone signals are adapted in real time to match the listener’s head orientation, maintaining spatial consistency.
+% slide 23
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{MTB.png}
+    \includegraphics[width=0.3\linewidth]{MTB capture.png}
+    \caption{MTB system - block diagram (left) and sound capturing (right)}
+\end{figure}
+When building microphone arrays to capture spatial audio accurately, one important rule must be followed: the microphones should be placed no more than \textbf{half a wavelength} apart. If they are too far apart unwanted distortions appear in the sound. These distortions show up as dips (called \textit{notches}) in the frequency response.
+These notches happen at specific frequencies, at off multiple of \textbf{critical frequency \( f_0 \)}, which depends on three factors: the number of microphones \( N \), the speed of sound \( c \) and the radius \( a \) of the microphone array.
+The critical frequency is given by:
+\[
+f_0 = \frac{Nc}{4\pi a}
+\]
+To avoid distortion in the audible range (up to 20~kHz), the array must be designed so that \( f_0 \) is higher than 20~kHz. This typically means using about \textbf{128 microphones} for a reasonably sized array.
+
+
+
+\textbf{Approximations} are commonly adopted to reduce system complexity. Exact reconstruction is often unnecessary: $N = 8$ microphones is typically sufficient \textit{for speech} and $N = 16$ can be enough \textit{for music}. Spectral notches can be effectively avoided by applying appropriate filtering to the microphone signals.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{MTB filtering.png}
+    \caption{Filtering and interpolation for MTB}
+\end{figure}
+
+\textbf{Filtering and interpolation} depend on the frequency of the signal.
+For \textbf{low frequencies} (below \( 0.5 f_0 \)), the signal is \textit{interpolated} between the two closest microphones. If the ear is halfway between them, both microphones are weighted equally (\( w = 0.5 \)); if the ear is aligned with one, that microphone is fully weighted (\( w = 1 \)).
+For \textbf{high frequencies} (above \( 0.5 f_0 \)), interpolation is avoided. Instead, the signal is taken directly from the \textit{nearest microphone} to preserve accuracy and avoid artifacts.
+
+
+
+In conclusion, MTB is a computationally simple technique that effectively captures spatial information, especially in live settings. It enables faithful rendering of the acoustics of the recording space but does not allow the listener to move freely - only head rotation is accounted for. Furthermore, it does not support traditional recording workflows.
+
+\clearpage

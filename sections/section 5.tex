@@ -1,0 +1,739 @@
+\section{Modelling and Implementation of Wave Digital Filters}
+
+\subsection{Introduction}
+
+\subsubsection{General Consideration on WDFs}
+
+We recall that the model of an electrical circuit is made of:
+\begin{itemize}
+    \item Equations describing the network topology called:
+    \begin{itemize}
+        \item Kirchhoff Voltage Laws (KVL)
+        \item Kirchhoff Current Laws (KCL)
+    \end{itemize}
+    \item Constitutive equations of circuit elements such as:
+    \begin{itemize}
+        \item One-port elements (i.e. sources, resistors, capacitors, inductors, diodes)
+        \item Multi-port elements (i.e. opamps, transformers, gyrators, transistors, vacuum tubes)
+    \end{itemize}
+\end{itemize}
+
+Kirchhoff’s circuit equations form multivariate systems of ordinary differential equations that capture the continuous-time dynamics of electrical networks. To simulate these circuits on a computer, we must replace time derivatives with discrete approximations via suitable discretization schemes. However, when we choose implicit methods, the resulting discrete-time equations remain implicit - because the element constitutive laws and the network’s topological constraints become intertwined - posing a significant computability challenge.
+
+A common remedy is to employ multivariate iterative solvers - most often Newton–Raphson algorithms - whose dimensionality scales with the number of circuit nodes (or loops). These powerful techniques form the backbone of virtually every Kirchhoff-based simulation framework, from the Modified Nodal Analysis (MNA) used in SPICE-style tools, to sparse-tableau formulations, classic state-space approaches and modern port-Hamiltonian methods.
+
+\subsection{Definition of Wave Variables}
+
+A generic port $n$ - which can constitute an element or be part of a junction - is characterised by the \textbf{Kirchhoff variables} \( v_n \) (port voltage) and \( i_n \) (port current).
+The Kirchhoff variables can be expressed in terms of \textbf{wave variables} as:
+
+\[ a_n = v_n + Z_n i_n \qquad b_n = v_n - Z_n i_n \]
+
+The parameter \( Z_n \) is called \textbf{reference port resistance}, the wave variable \( a_n \) represents the incident wave, while \( b_n \) denotes the reflected wave.
+The inverse mapping allows to recover the Kirchhoff variables from the wave variables:
+
+\[ v_n = \frac{a_n + b_n}{2} \qquad i_n = \frac{a_n - b_n}{2 Z_n} \]
+
+We observe that the Kirchhoff-to-Wave and Wave-to-Kirchhoff linear transformations respectively are: 
+\[
+\begin{pmatrix}
+    a_n \\
+    b_n
+\end{pmatrix}
+= 
+\begin{bmatrix}
+    1 & Z_n \\
+    1 & -Z_n
+\end{bmatrix}
+\begin{pmatrix}
+    v_n \\
+    i_n
+\end{pmatrix}
+,\qquad
+\begin{pmatrix}
+    v_n \\
+    i_n
+\end{pmatrix}
+= \frac{1}{2}
+\begin{bmatrix}
+    1 & 1 \\
+    1/Z_n & -1/Z_n
+\end{bmatrix}
+\begin{pmatrix}
+    a_n \\
+    b_n
+\end{pmatrix}
+\]
+
+\subsection{Constitutive equations of one-port elements}
+In the \textbf{continuous-time domain}, the relationship between the port voltage \( v(t) \) and the port current \( i(t) \) can be expressed through a constitutive equation:
+\[
+h(v(t), i(t)) = 0
+\]
+The nature of the function \( h \) depends on the type of element. If the element is memoryless, \( h \) defines an instantaneous relationship, meaning that the function involves no derivatives and the output depends solely on the present values of \( v(t) \) and \( i(t) \). Examples include resistors or sources.
+For dynamic elements, such as capacitors or inductors, the function \( h \) incorporates time derivatives, indicating that the current or voltage at a given time is influenced by past values. In the discrete-time domain, these derivatives are approximated using finite differences.
+
+
+In the \textbf{discrete-time domain}, the corresponding expression becomes:
+\[ \tilde{h}(v[k], i[k]) = 0 \]
+where the time index \( k \) (sampling index) defines the sampled signals \( v[k] = v(k T_s) \) and \( i[k] = i(k T_s) \). If the element is memoryless, the discrete-time function \( \tilde{h} \) mirrors the continuous-time function, i.e. \( \tilde{h}  = h\). Otherwise, they differ. 
+
+\subsection{Modelling the Elements}
+
+\subsubsection{Linear One-port elements}
+
+In the discrete-time domain, \textbf{the constitutive equation for linear one-port elements} takes the form:
+\[ v[k] = R_e[k] i[k] + V_e[k] \]
+Here, \( R_e[k] \) represents a \textbf{resistance parameter} and \( V_e[k] \) denotes a 	\textbf{voltage bias}, which can be interpreted as an offset or external voltage contribution that is added to the linear response of the element. This bias can represent sources of constant voltage, external influences, or disturbance signals and both parameters can potentially vary with the time index \( k \). 
+
+For linear elements, it is immediate that the finite difference is:  $\frac{\Delta v[k]}{\Delta i[k]} = R_e[k]$
+
+\subsubsection{Linear Resistor}
+
+In the continuous-time domain, a linear resistor of resistance \(R\) follows the constitutive law:
+\[
+v(t) = R\cdot i(t)
+\]
+
+When we move to discrete time - sampling signals at integer instants, the same relationship becomes:
+\[
+v[k] = R \cdot i[k]
+\]
+
+The equation above is in fact just a special case of the general discrete-time port equation, arising when the equivalent resistance \(R_e[k]=R\) and the equivalent voltage source \(V_e[k] =0\).
+
+\subsubsection{Linear Resistive Voltage Generator}
+
+In the continuous‐time domain, a resistive voltage source with internal resistance \(R_g\) and source waveform \(V_g(t)\) obeys the constitutive law:
+\[
+  v(t) = R_g\ i(t) + V_g(t)
+\]
+When we sample at discrete instants \(k\), this relation becomes:
+\[
+  v[k] = R_g\ i[k] + V_g[k]
+\]
+These equations are in fact a special case of the general port equation: one simply sets the equivalent resistance \(R_e[k] = R_g\) and the equivalent source voltage \(V_e[k] = V_g[k] = V_g(kT_s)\).
+
+\subsubsection{Linear Dynamic Elements}
+
+In the continuous‐time domain, a linear dynamic element - whether a capacitor or an inductor - is described by
+\[
+  y(t) = \mu \ \frac{\mathrm{d}x(t)}{\mathrm{d}t}
+\]
+Note that \(x(t)\) denotes the port voltage or port current, \(y(t)\) the corresponding port current or port voltage, such that if $x(t)$ is port voltage, then $y(t)$ is a port current and vice-versa. \( \mu \) the real‐valued coefficient (capacitance or inductance).
+
+In the Laplace domain, differentiation in time corresponds to multiplication by the complex frequency \(s\), so the relationship becomes:
+\[
+  Y(s) = s\ \mu\ X(s)
+\]
+
+\subsubsection{Time Derivative Approximations}
+
+To approximate time derivatives in discrete-time systems, we \textbf{map the Laplace domain variable \( s \) to the Z-domain variable} \( z = e^{sT_s} \). This transformation can be done in various ways. Two common methods are:
+
+1. \textbf{Backward Euler method}:
+\[ s \gets \frac{1 - z^{-1}}{T_s} \]
+2. \textbf{Trapezoidal rule} (bilinear transform or Tustin's method):
+\[ s \gets \frac{2}{T_s} \cdot \frac{1 - z^{-1}}{1 + z^{-1}} \]
+
+The trapezoidal rule provides a more accurate approximation over a wider frequency range compared to the backward Euler method. 
+
+The \textbf{trapezoidal rule} establishes a mapping between discrete-time and continuous-time frequencies. The transformation is expressed as:
+\[ j\omega \gets \frac{2}{T_s} \cdot \frac{ e^{j\tilde{\omega} T_s} - 1}{ e^{j\tilde{\omega} T_s} + 1} \]
+where the discrete-time frequency \( \tilde{\omega} \) is related to the continuous-time frequency \( \omega \) by the expressions \( s = j\omega \) and \( z = e^{j\tilde{\omega} T_s} \).
+After simplification (using Euler's formula), the mapping can be expressed as:
+\[
+j\omega \gets j \frac{2}{T_s} \tan \left( \frac{\tilde{\omega} T_s}{2} \right) 
+\quad \Rightarrow \omega = \frac{2}{T_s} \tan \left( \frac{\tilde{\omega} T_s}{2} \right)
+\]
+
+At low frequencies, the two frequencies are nearly identical, i.e. $\omega \approx \tilde{\omega}$ (1st order Taylor series, $\tan(x) \approx x$ if $x$ is very small). However, as the frequency increases, the discrepancy grows. Increasing the sampling frequency \( F_s = 1/T_s \) minimizes the divergence, making the mapping more accurate across the frequency spectrum.
+
+\subsubsection{Linear Capacitor}
+
+In the Laplace domain, the constitutive equation of a \textbf{linear capacitor} with capacitance \( C \) relates the current \( I(s) \) and the voltage \( V(s) \) as:
+\[ I(s) = sC V(s) \]
+Applying the trapezoidal rule to this expression results in the discrete-time form:
+\[ v[k] = \frac{T_s}{2C} i[k] + \frac{T_s}{2C} i[k-1] + v[k-1] \]
+This discrete-time equation can be interpreted as a special case of the general constitutive equation, where the parameters \( R_e[k] \) and \( V_e[k] \) are defined as:
+\[ R_e[k] = \frac{T_s}{2C}, \qquad V_e[k] = \frac{T_s}{2C} i[k-1] + v[k-1] \]
+
+\subsubsection{Linear Inductor}
+In the Laplace domain, the constitutive equation for a \textbf{linear inductor} with inductance \( L \) is given by:
+\[ V(s) = sL I(s) \]
+Applying the trapezoidal rule to this expression, the discrete-time form can be expressed as:
+\[ v[k] = \frac{2L}{T_s} i[k] - \frac{2L}{T_s} i[k-1] - v[k-1] \]
+This formulation is analogous to the general constitutive equation with the parameters \( R_e[k] \) and \( V_e[k] \) defined as:
+\[ R_e[k] = \frac{2L}{T_s}, \qquad V_e[k] = -\frac{2L i[k-1]}{T_s} - v[k-1] \]
+
+
+\subsubsection{Linear Wave Digital One-Port Element}
+
+In the discrete-time domain, as said before, \textbf{the wave-to-Kirchhoff transformation expresses the port voltage and current in terms of the wave variables} as:
+\[ v[k] = \frac{a[k] + b[k]}{2}, \qquad i[k] = \frac{a[k] - b[k]}{2Z[k]} \]
+
+We recall the general constitutive equation of linear one-port elements: 
+\[
+v[k] = R_e[k] \cdot i[k] + V_e[k]
+\]
+Substituting these expressions into the general constitutive equation and isolating \( b[k] \), the scattering relation for a generic linear one-port element is obtained:
+\[
+b[k] = \underbrace{\frac{R_e[k] - Z[k]}{R_e[k] + Z[k]} a[k]}_{\text{Reflected Term}} + 
+\underbrace{\frac{2Z[k]}{R_e[k] + Z[k]} V_e[k]}_{\text{Bias Term}}
+\]
+In the \textbf{adaptation case}, where the instantaneous dependency of \( b[k] \) on \( a[k] \) is removed by setting \( Z[k] = R_e[k] \), the scattering relation simplifies to:
+\[
+b[k] = V_e[k]
+\]
+In this configuration, \( b[k] \) is fully determined by the bias term \( V_e[k] \), effectively isolating it from the incident wave \( a[k] \). Thus, the system behaves as a perfectly adapted element with zero reflection.
+The relationship between \( b[k] \) and \( a[k] \) is characterized by a linear trend where:
+
+\begin{itemize}
+    \item The second term \( V_e[k] \) acts as a constant bias.
+    \item The slope of the relation, defined as:$
+    \frac{\Delta b[k]}{\Delta a[k]} = \frac{R_e[k] - Z[k]}{R_e[k] + Z[k]}
+    $
+    becomes zero in the adaptation case, confirming that the system no longer reflects any portion of the incident wave.
+\end{itemize}
+
+
+Note that the wave mappings formulas below are obtained thanks to the $Z$-transform of the elements discussed in chapter 4.
+\begin{table}[h!]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Type of element} & \textbf{Constitutive Eq.} & \textbf{Wave Mapping} & \textbf{Adaptation Condition} \\ 
+\midrule
+Resistive voltage source & $v(t) = V_g(t) + R_g\ i(t)$                & $b[k] = V_g[k]$         & $Z[k] = R_g$             \\
+Resistor                  & $v(t) = R\ i(t)$                          & $b[k] = 0$              & $Z[k] = R$               \\
+Capacitor                 & $i(t) = C\ \frac{d v(t)}{dt}$             & $b[k] = a[k-1]$         & $Z[k] = \frac{T_s}{2C}$  \\ 
+Inductor                  & $v(t) = L\ \frac{d i(t)}{dt}$             & $b[k] = -\ a[k-1]$      & $Z[k] = \frac{2L}{T_s}$  \\ 
+\bottomrule
+\end{tabular}
+\caption{Wave mappings of common WD linear one-port elements.}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{K2W_Resisive_Voltage_Generator_model.png}
+    \caption{Resistive voltage source}
+    \label{fig:wd_voltage_source}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{K2W_Resistor_model.png}
+    \caption{Resistor}
+    \label{fig:wd_resistor}
+  \end{subfigure}
+
+  \vspace{2em}
+
+  \begin{subfigure}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{K2W_Capacitor_model.png}
+    \caption{Capacitor}
+    \label{fig:wd_capacitor}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{K2W_Inductor_model.png}
+    \caption{Inductor}
+    \label{fig:wd_inductor}
+  \end{subfigure}
+
+  \caption{K2W one-port models of common linear elements with their adaption case}
+  \label{fig:wd_one_port_models}
+\end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.5\linewidth]{K2W_Resistor_model.png}
+%     \caption{Enter Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure} [H]
+%     \centering
+%     \includegraphics[width=0.5\linewidth]{K2W_Resisive_Voltage_Generator_model.png}
+%     \caption{Enter Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.5\linewidth]{K2W_Capacitor_model.png}
+%     \caption{Enter Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.5\linewidth]{K2W_Inductor_model.png}
+%     \caption{Enter Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Comparison of Standard and K2W Approaches}]
+\begin{minipage}{0.48\textwidth}
+\textbf{Standard Approach}
+\begin{itemize}[label=$\bullet$]
+    \item Define the constitutive equation in the Laplace domain using Kirchhoff variables (voltage and current).
+    \item Apply the bilinear transform to map the system to the discrete-time domain.
+    \item After the transformation, apply the K2W mapping to express the system in terms of incident and reflected waves.
+\end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\textbf{K2W Approach}
+\begin{itemize}[label=$\bullet$]
+    \item Define the constitutive equation in the Laplace domain using Kirchhoff variables.
+    \item Apply the K2W mapping in the Laplace domain, expressing the system in terms of waves rather than Kirchhoff variables.
+    \item Apply the bilinear transform to transition to the discrete-time domain, maintaining the wave-based representation.
+\end{itemize}
+\end{minipage}
+\end{tcolorbox}
+
+
+\subsubsection{Nonlinear Diode Model}
+
+\textbf{The Shockley diode model} describes the current-voltage relationship for a p-n junction diode as:
+\[ i(t) = I_s \left(e^{v(t)/(\eta V_{th})} - 1\right) \]
+
+Where $I_s$ is the saturation current, $V_{th}$ the thermal voltage and $\eta$ the ideality factor.
+
+The equation is inherently nonlinear and cannot be expressed in the form of a linear constitutive equation.
+In the wave digital (WD) domain, substituting the wave variables into the discrete-time version of the Shockley diode equation results in a transcendental equation. Transcendental functions are those that cannot be expressed as a finite combination of the algebraic operations (addition, subtraction, multiplication, division and taking roots).
+
+The closed-form solution for \( b[k] \) is given by:
+\[ b[k] = a[k] + 2Z[k] I_s - 2\eta V_{th} W \left( \frac{Z[k] I_s}{\eta V_{th}} e^{\frac{Z[k] I_s + a[k]}{\eta V_{th}}} \right) \]
+The function \( W(x) \) represents the Lambert function, implicitly defined as:
+\[ x = W(x) e^{W(x)} \]
+\textit{Unlike linear elements, the nonlinear WD diode and other nonlinear components cannot be adapted to a simplified form. Note that there are methods to face this issue but they won't be discussed here}.
+
+\subsection{Modelling the Topology}
+
+\subsubsection{Topological Junctions and Connection Networks}
+
+A $N$-port topological junction is an open interconnection network without electrical loads, characterized by a set of port voltages and port currents. The vectors of port voltages \( \underline{v} \) and port currents \( \underline{i} \) can be expressed as:
+\[ \underline{v} = [v_1, \ldots, v_N]^T, \quad \underline{i} = [i_1, \ldots, i_N]^T \]
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.63\linewidth]{reference-circuit-to-topological-connection-network.png}
+    \caption{Example of reference circuit drawn as a topological connection network}
+    \label{fig:reference-circuit-to-topological-connection-network}
+\end{figure}
+
+\subsubsection{Relation between Port Variables}
+A subset of \textbf{independent port voltages} is defined by the relation:
+$$
+\underline{v} = [Q]^T \underline{v_t}
+$$
+Here, \( \underline{v_t} \) represents the vector of independent port voltages, while \( \underline{v} \) is a set of dependent voltages expressed as a linear combination of the independent set \( \underline{v_t} \). The matrix \( [Q] \) is the fundamental cut-set matrix. The size of \( \underline{v_t} \) is \( q \times 1 \) and \( [Q] \) is of size \( q \times N \).
+
+Similarly, a subset of \textbf{independent port currents} can be defined as:
+\[
+\underline{i} = [B]^T \underline{i_l}
+\]
+In this case, \( \underline{i_l} \) is the vector of independent port currents, whereas \( \underline{i} \) is a set of dependent currents obtained as a linear combination of the independent set \( \underline{i_l} \). The matrix \( [B] \) is the fundamental loop matrix. The size of \( \underline{i_l} \) is \( p \times 1 \) and \( [B] \) is of size \( p \times N \).
+
+Since \( p + q = N \), the orthogonality condition can be expressed as:
+\[
+[B] [Q]^T = [0]_{p \times q}, \qquad [Q] [B]^T = [0]_{q \times p}
+\]
+This orthogonality condition ensures that the selected sets of independent voltages and currents are chosen in a way that avoids redundancy, allowing the entire system to be represented using a minimal set of independent variables.
+
+\subsubsection{Finding independent port variables}
+
+\textit{To identify independent port variables}, consider the directed graph \( \mathcal{D} \) of the reference circuit. The edges represent the loads of the connection network and the vertices represent the circuit nodes. A \textbf{tree-cotree decomposition} is applied to \( \mathcal{D} \):
+
+\begin{itemize}
+    \item \textbf{Tree (\( \mathcal{T} \))}: A connected, acyclic subgraph that includes all vertices and a minimal set of edges without forming cycles. Independent port voltages, collected in \( \underline{v_t} \), correspond to these edges.
+    \item \textbf{Cotree (\( \mathcal{C} \))}: The remaining edges not included in the tree, representing loops in the circuit. Independent port currents, collected in \( \underline{i_l} \), correspond to these edges.
+\end{itemize}
+
+Since this decomposition is not unique, different valid selections of trees and cotrees can lead to distinct sets of independent variables.
+
+
+
+\begin{figure}[H]
+    \centering
+
+    % Top row
+    \begin{subfigure}[b]{0.4\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{series-connection-network-example.png}
+        \caption{Series connection}
+        \label{fig:series}
+    \end{subfigure}
+    \hspace{0.05\linewidth}
+    \begin{subfigure}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{parallel-connection-network-example.png}
+        \caption{Parallel connection}
+        \label{fig:parallel}
+    \end{subfigure}
+
+    \vspace{0.5cm}  % Space between rows
+
+    % Bottom row
+    \begin{subfigure}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{bridged-tee-connection-network-example.png}
+        \caption{Bridged-Tee connection}
+        \label{fig:bridged}
+    \end{subfigure}
+
+    \caption{Examples of different network connections}
+    \label{fig:network-connections}
+\end{figure}
+
+In the examples above, the independent port currents/voltages are respectively:
+\[
+\underline{i} = [B]^T \underline{i}_l \rightarrow
+\begin{bmatrix}
+i_1 \\
+i_2 \\
+i_3 \\
+i_4
+\end{bmatrix} = [I]_{4\times4} \cdot i_1, \quad
+\underline{v} = [Q]^T \underline{v}_t \rightarrow
+\begin{bmatrix}
+v_1 \\
+v_2 \\
+v_3 \\
+v_4
+\end{bmatrix} = [I]_{4\times4}\cdot v_4
+, \quad
+\underline{\mathrm{i}} = [\mathrm{B}]^T \underline{\mathrm{i}}_l \rightarrow
+\begin{bmatrix}
+i_1 \\
+i_2 \\
+i_3 \\
+i_4 \\
+i_5 \\
+i_6
+\end{bmatrix} = 
+\begin{bmatrix}
+1 & 0 & 0  \\
+0 & 1 & 0  \\
+0 & 0 & 1  \\
+-1 & -1 & 0  \\
+-1 & 0 & 1  \\
+0 & -1 & -1 
+\end{bmatrix}
+\begin{bmatrix}
+i_1 \\
+i_2 \\
+i_3
+\end{bmatrix}
+\]
+
+\subsubsection{WD Junctions}
+
+In the wave digital (WD) domain, a topological connection network is modelled as a \textbf{WD scattering junction}, also referred to as an adaptor. The Kirchhoff-to-wave mapping for port variables is given by:
+\[ \underline{a} = \underline{v} + \left[Z\right] \cdot \underline{i}, \quad \underline{\mathrm{b}} = \underline{v} - \left[Z\right] \cdot \underline{i} \]
+Where \( \underline{a} = \left(a_1, ..., a_N\right)^T \) and \( \underline{\mathrm{b}} = \left(b_1, ..., b_N\right)^T \) are vectors of incident and reflected waves and \( \left[Z\right] = \mathrm{diag}\left( Z_1, ..., Z_N \right) \) is a diagonal matrix of port resistances.
+The \textbf{scattering relation} in matrix form is expressed as:
+\[ \underline{\mathrm{b}} = \left[S\right] \underline{a} \]
+%%%%%%%%HA detto che le due versioni di S non le vuole sapere
+Where $\left[ S \right]$ is the $N \times N$ scattering matrix.
+
+\subsubsection{Formation of the scattering matrix \textit{(optional)}}
+
+If $q \leq p$, we use 
+$$
+\left[ S \right] = 2 \ \left[ Q \right]^T \left(\left[ Q \right]  \left[ Z \right]^{-1} \left[ Q \right]^T \right)^{-1} \left[ Q \right] \ \left[ Z \right]^{-1} - \left[ I \right]
+$$
+
+Where $\left[ I \right]$ is the $N \times N $ identity matrix. Note that the inversion of the $q \times q$ matrix $\left[ Q \right]  \left[ Z \right]^{-1} \left[ Q \right]^T$ is required.
+
+If $q \geq p$, we use 
+$$
+\left[ S \right] =  \left[ I \right] - 2 \left[Z\right] \left[B\right]^T \left( \left[ B \right]  \left[ Z \right] \left[ B \right]^T \right)^{-1} \left[B\right]
+$$
+
+Note that the inversion of the $p \times p$ matrix $\left[ B \right]  \left[ Z \right] \left[ B \right]^T$ is required.
+
+\subsubsection{WD Adaptors: Reflection-free ports in WD junctions}
+
+One port of a topoligcal WD junction can be made reflection-free (we say that the port is adapted). \textbf{A WDF block that is considered adapted at any port is marked with a T-shaped symbol}, making that port reflection-free.
+
+The $n^{th}$ port of a WD junctions is made \textbf{reflection-free} by setting its diagonal entry in the scattering matrix to zero, i.e. $ s_{nn} = 0, \ \forall n \in [1,N]$.
+This condition can be achieved by \textbf{appropriately setting the port resistance} \( Z_n \).
+
+The $n^{th}$ port of a $N$-port \textbf{series} WD junction is made reflection-free by setting: 
+\[ Z_n = \sum_{k \neq n} Z_k \]
+
+The $n^{th}$ port of a $N$-port \textbf{parallel} WD junction is made reflection-free by setting:
+\[ Z_n^{-1} = \sum_{k \neq n} Z_k^{-1} \]
+
+\subsection{Connection Tree }
+
+
+\subsubsection{Modelling WDFs with One Nonlinearity}
+
+A Wave Digital Filter (WDF) is structured as a connection tree, where \textbf{the nonlinear one-port element is placed at the root}, allowing it to process all incoming wave information without direct feedback. WD junctions function as nodes, organizing the flow of signals and managing connections between ports. 
+
+\textbf{To maintain numerical stability, ports connected to other junctions or to the nonlinear root are configured to be reflection-free}. Linear one-port elements serve as leaves in the structure, each adapted to avoid reflections. When the topology consists only of series and parallel connections, the WDF can be reformulated as a \textbf{Binary Connection Tree (BCT)}, with each node representing a 3-port series or parallel WD junction.
+\begin{figure}[H]
+    \centering
+
+    \begin{subfigure}[b]{0.35\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{generic-connection-tree-with-one-node.png}
+        \caption{Generic connection tree with one node}
+        \label{fig:generic-tree}
+    \end{subfigure}
+    \hspace{0.08\linewidth}
+    \begin{subfigure}[b]{0.4\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{binary-connection-tree-example.png}
+        \caption{Binary Connection Tree example}
+        \label{fig:binary-tree}
+    \end{subfigure}
+
+    \caption{Examples of connection tree structures}
+    \label{fig:tree-structures}
+\end{figure}
+
+
+\subsubsection{Computational Flow in Connection Trees}
+
+The computational flow in connection trees involves three main steps:
+
+\begin{itemize}
+    \item \textbf{Forward Scan:} 
+    \begin{itemize}
+        \item The scan starts at the leaves (linear elements) and moves toward the root (nonlinear element).
+        \item Incident waves are calculated at each leaf and propagated through the junctions to the root.
+    \end{itemize}
+    
+    \item \textbf{Scattering at the Root:} 
+    \begin{itemize}
+        \item The root processes the incident waves and calculates the reflected wave.
+    \end{itemize}
+
+    \item \textbf{Backward Scan:} 
+    \begin{itemize}
+        \item The reflected wave is propagated back from the root to the leaves, updating incident waves at each element.
+    \end{itemize}
+\end{itemize}
+
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=0.42\linewidth]{computation-flow-in-BCT.png}
+    \caption{Illustration of computational flow in a BCT}
+    \label{fig:enter-label}
+\end{figure}
+
+\subsection{Example of Application (\textit{optional})}
+
+We consider here an envelope follower circuit and its WDF implementation. 
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{envelope-follower-electronic-scheme.png}
+    \caption{Analog envelope‐follower circuit schematic}
+    \label{fig:envf_schematic}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{envelope-follower-WDF-BCT-model.png}
+    \caption{Wave‐digital/BCT model of the envelope follower}
+    \label{fig:envf_wdf_model}
+  \end{subfigure}
+  \caption{Two representations of an envelope‐follower.}
+  \label{fig:envelope_follower_comparison}
+\end{figure}
+
+\subsubsection{WDF structure}
+
+The WDF is composed of:
+\begin{itemize}
+    \item four linear one-port elements - an input voltage source \(V_{\mathrm{in}}\) with series resistance \(R_{\mathrm{in}}\), an inductor \(L\), a capacitor \(C\) and an output resistor \(R_{\mathrm{out}}\)
+    \item three-port junctions (two series adaptors and one parallel adaptor)
+    \item a single nonlinear element, the exponential diode \(D\) 
+\end{itemize} 
+
+\subsubsection{Port connections between WD blocks}
+Ports on each three-port adaptor are numbered for clarity: the adaptor connecting ports 4, 5 and 6 functions as the parallel junction, while the other two junctions serve as series adaptors.
+
+As an example, when port 1 of a series adaptor is connected to port 4 of the parallel adaptor, the scattering variables must satisfy
+\[
+  a_{1}[k] = b_{4}[k], \quad
+  a_{4}[k] = b_{1}[k], \quad
+  Z_{1} = Z_{4}.
+\]
+Similarly, linking port 2 of one series adaptor to port 7 of the other series adaptor imposes
+\[
+  a_{2}[k] = b_{7}[k], \quad
+  a_{7}[k] = b_{2}[k], \quad
+  Z_{2} = Z_{7}.
+\]
+
+\subsubsection{Adaptation conditions}
+A WDF block is considered adapted at any port marked with a T-shaped symbol, making that port reflection-free. For example, the parallel adaptor’s port 4 is adapted, as are all linear one-port elements; the only exception is the exponential diode, which cannot be adapted.
+
+At ports facing physical, linear elements, the adaptation impedances coincide with the element values:
+\[
+  Z_{9} = R_{\text{in}},\quad
+  Z_{6} = R_{\text{out}},\quad
+  Z_{5} = \frac{T_{s}}{2C},\quad
+  Z_{8} = \frac{2L}{T_{s}}.
+\]
+Meanwhile, ports that connect to other adaptors use series/parallel combinations of these impedances:
+\[
+  Z_{1} = Z_{4} = \frac{Z_{5}\ Z_{6}}{Z_{5}+Z_{6}},\quad
+  Z_{2} = Z_{7} = Z_{8} + Z_{9},\quad
+  Z_{3} = Z_{1} + Z_{2}.
+\]
+
+\subsubsection{Scattering relations of the elements}
+
+The real voltage source with series resistance $R_{\mathrm{in}}$ injects its input directly into the incoming wave:  $$ a_{9}[k] = V_{\mathrm{in}}[k]$$
+
+A pure resistor reflects nothing, giving: $$a_{6}[k] = 0$$
+
+Dynamic elements introduce a one‐sample delay: 
+\begin{itemize}
+    \item the capacitor’s reflected wave equals the previous outgoing wave: $$a_{5}[k] = b_{5}[k-1]$$
+
+\item whereas the inductor both inverts and delays: $$a_{8}[k] = -\ b_{8}[k-1]$$
+\end{itemize}
+
+Finally, the exponential diode $D$ obeys a nonlinear scattering law involving the Lambert W function: $$a_{3}[k] 
+    = b_{3}[k] \;+\; 2\ Z_{3}I_{s}
+    \;-\;2\ \eta\ V_{\mathrm{th}}\ 
+    W\! \left( \tfrac{Z_{3}I_{s}}{\eta\ V_{\mathrm{th}}}
+      \exp\!\left( \tfrac{Z_{3}I_{s} + b_{3}[k]}{\eta\ V_{\mathrm{th}}}\right)\right)$$
+
+
+\subsubsection{Scattering relations of the WD junctions}
+
+The first series adaptor, connecting ports 1, 2 and 3, is described by its scattering matrix \([S_{S_1}]\):
+\[
+  \begin{pmatrix}b_{1}[k]\\b_{2}[k]\\b_{3}[k]\end{pmatrix}
+  = [S_{S_1}]
+    \begin{pmatrix}a_{1}[k]\\a_{2}[k]\\a_{3}[k]\end{pmatrix}.
+\]
+
+The second series adaptor, linking ports 7, 8 and 9, uses its own matrix \([S_{S_2}]\):
+\[
+  \begin{pmatrix}b_{7}[k]\\b_{8}[k]\\b_{9}[k]\end{pmatrix}
+  = [S_{S_2}]
+    \begin{pmatrix}a_{7}[k]\\a_{8}[k]\\a_{9}[k]\end{pmatrix}.
+\]
+
+The parallel adaptor, at ports 4, 5 and 6, is governed by the parallel scattering matrix \([S_{P_1}]\):
+\[
+  \begin{pmatrix}b_{4}[k]\\b_{5}[k]\\b_{6}[k]\end{pmatrix}
+  = [S_{P_1}]
+    \begin{pmatrix}a_{4}[k]\\a_{5}[k]\\a_{6}[k]\end{pmatrix}.
+\]
+
+
+
+\subsubsection{Scattering matrices of the WD junctions}
+The scattering matrices mentioned above can be further detailed as follows.
+
+The first series adaptor (ports 1, 2 and 3) uses:
+\[
+  [S_{S_1}]
+  = \begin{pmatrix}
+      \gamma_{S1} & (\gamma_{S1}-1) & (\gamma_{S1}-1)\\
+      -\gamma_{S1}& (1-\gamma_{S1})  & -\gamma_{S1}\\
+      -1          & -1               & 0
+    \end{pmatrix},
+  \quad
+  \gamma_{S1}=\frac{Z_{2}}{Z_{1}+Z_{2}}.
+\]
+
+The second series adaptor (ports 7, 8 and 9) is described by:
+\[
+  [S_{S_2}]
+  = \begin{pmatrix}
+      0           & -1              & -1\\
+      -\gamma_{S2}& (1-\gamma_{S2}) & -\gamma_{S2}\\
+      (\gamma_{S2}-1)&(\gamma_{S2}-1)& \gamma_{S2}
+    \end{pmatrix},
+  \quad
+  \gamma_{S2}=\frac{Z_{8}}{Z_{8}+Z_{9}}.
+\]
+
+Finally, the parallel adaptor (ports 4, 5 and 6) employs:
+\[
+  [S_{P_1}]
+  = \begin{pmatrix}
+      0          & (1-\gamma_{P1}) & \gamma_{P1}\\
+      1          & -\gamma_{P1}    & \gamma_{P1}\\
+      1          & (1-\gamma_{P1}) & (\gamma_{P1}-1)
+    \end{pmatrix},
+  \quad
+  \gamma_{P1}=\frac{Z_{5}}{Z_{5}+Z_{6}}.
+\]
+
+
+\subsubsection{Computational flow of the system}
+
+Let's proceed to the Forward Scan (from leaves to root of the BCT).
+
+First, the waves reflected by the linear one-port elements are computed as:
+\[
+  a_{9}[k] = V_{\mathrm{in}}[k],\quad
+  a_{6}[k] = 0,\quad
+  a_{5}[k] = b_{5}[k-1],\quad
+  a_{8}[k] = -\ b_{8}[k-1].
+\]
+Next, the first layer of adaptors reflects:
+\[
+  b_{4}[k] = (1 - \gamma_{P1})\ a_{5}[k] + \gamma_{P1}\ a_{6}[k],\quad
+  b_{7}[k] = -\ a_{8}[k] \;-\; a_{9}[k].
+\]
+Finally, the second layer of adaptors yields:
+\[
+  a_{1}[k] = b_{4}[k],\quad
+  a_{2}[k] = b_{7}[k],\quad
+  b_{3}[k] = -\ a_{1}[k] \;-\; a_{2}[k].
+\]
+
+After the forward scan has delivered the incident wave \(b_{3}[k]\) at the root of the BCT, the exponential diode computes its reflected wave according to its nonlinear I–V law (local nonlinear scattering stage). In wave variables, this yields
+\[
+  a_{3}[k]
+    = b_{3}[k]
+    + 2\ Z_{3}\ I_{s}
+    - 2\ \eta\ V_{\mathrm{th}}\ 
+      W\!\Bigl(\frac{Z_{3}I_{s}}{\eta\ V_{\mathrm{th}}}
+      \exp\!\bigl(\tfrac{Z_{3}I_{s} + b_{3}[k]}{\eta\ V_{\mathrm{th}}}\bigr)\Bigr),
+\]
+where \(W\) denotes the Lambert function.
+
+After the local nonlinear scattering at the diode, the backward scan propagates the reflected waves through the second layer of series adaptors back toward the linear elements.
+
+For the series junction at ports 1, 2 and 3, the outgoing waves satisfy:
+\begin{align*}
+b_{1}[k] & = \gamma_{S1}\ a_{1}[k] + (\gamma_{S1}-1)\ a_{2}[k] + (\gamma_{S1}-1)\ a_{3}[k] 
+\\
+b_{2}[k] & = -\gamma_{S1}\ a_{1}[k] + (1-\gamma_{S1})\ a_{2}[k] - \gamma_{S1}\ a_{3}[k]
+\end{align*}
+
+
+These adaptor outputs then become the incident waves on the first layer of adaptors and linear elements:
+\[
+  a_{4}[k] = b_{1}[k],
+  \quad
+  a_{7}[k] = b_{2}[k].
+\]
+Finally, the remaining reflected waves toward the capacitive, inductive and resistive elements are:
+\begin{align*}
+b_{5}[k] & = a_{4}[k] - \gamma_{P1}\ a_{5}[k] + \gamma_{P1}\ a_{6}[k] 
+\\
+b_{6}[k] &= a_{4}[k] + (1-\gamma_{P1})\ a_{5}[k] + (\gamma_{P1}-1)\ a_{6}[k]
+\\
+b_{8}[k] &= -\gamma_{S2}\ a_{7}[k] + (1-\gamma_{S2})\ a_{8}[k] - \gamma_{S2}\ a_{9}[k]
+\\
+b_{9}[k] &= (\gamma_{S2}-1)\ a_{7}[k] + (\gamma_{S2}-1)\ a_{8}[k] + \gamma_{S2}\ a_{9}[k]
+\end{align*}
+
+
+
+\clearpage

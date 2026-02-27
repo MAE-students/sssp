@@ -1,0 +1,363 @@
+\section{Geometric Reverberation Algorithms}
+
+\subsection{Introduction}
+
+Reverberations, especially early reflections, convey essential \textbf{information about the environment}.
+They reveal the shape and geometry of a space, the materials of surrounding surfaces and even allow us to perceive our own position and orientation within it.
+These spatial cues play a critical role in navigation and situational awareness.
+
+Accurately modelling these acoustic properties is fundamental for \textbf{immersive rendering} in virtual environments.
+The direction and timing of early reflections must be captured in order to recreate a convincing sense of space.
+Geometric modelling algorithms enable this by taking into account the \textbf{physical layout} and reflective properties of the environment.
+
+The acoustic environment also enhances our perception in more subtle but significant ways.
+It contributes to the sense of presence, helps us interpret the size and material of a room and supports \textbf{selective auditory attention} - enabling us to focus on a specific sound source in the presence of others, like in the \textit{cocktail party effect}.
+Finally, acoustic modelling contributes to the aesthetic quality of sound, enhancing both its clarity and listening comfort.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{eeee.png}
+    \caption{Blocks scheme of environmental modelling}
+\end{figure}
+
+\subsection{Geometric Acoustic Modelling}
+
+\textbf{Geometric acoustic modelling} is a method used to \textbf{spatialize sound} by simulating the different paths that sound waves take from the source to the listener.
+This approach is conceptually similar to techniques used in computer graphics, such as \textbf{ray tracing}, since both involve modelling how waves propagate through space.
+However, sound differs from light in important ways: acoustic simulations require special considerations that distinguish them from purely visual models.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{aaa.png}
+    \includegraphics[width=0.33\linewidth]{eeeer.png}
+    \caption{Reverberation paths model (left), light wave propagation model (right)}
+\end{figure}
+
+Unlike light, sound has much \textbf{longer wavelengths}, which makes \textbf{diffractions} more significant.
+As a result, specular reflections tend to dominate over diffuse ones and small objects have little effect in terms of occlusion.
+Furthermore, modelling the \textbf{phase} of the signal is crucial to accurately simulate \textbf{interference effects}.
+Another important consideration is that sound travels much \textbf{slower than light}, so reverberations are perceived over time and contribute to the spatial and temporal texture of an acoustic space.
+
+By combining these physical principles with geometric algorithms, one can simulate how sound interacts with the environment.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{asdf.png}
+    \includegraphics[width=0.3\linewidth]{asdf2.png}
+    \includegraphics[width=0.3\linewidth]{asdf3.png}
+    \caption{Differences between graphics and sounds - diffraction (left), interference (center), reverberation time evolution (right)}
+\end{figure}
+
+Several \textbf{computational approaches} exist to model sound propagation and reverberation in complex environments:
+
+\begin{itemize}
+    \item \textbf{Finite Element Methods (FEM)}: numerical solution of the wave equation on a discretized domain; suitable for low-frequency simulations and complex geometries.
+    \item \textbf{Boundary Element Methods (BEM)}: solve the wave equation using only boundary discretization, reducing computational cost for certain problems.
+    \item \textbf{Image Source Methods}: model reflections as virtual sources mirrored across surfaces; efficient for early reflections in simple geometries.
+    \item \textbf{Ray Tracing}: simulate sound as rays bouncing off surfaces, effective for high-frequency and complex scenes.
+    \item \textbf{Beam Tracing}: similar to ray tracing but tracks beams instead of individual rays, improving coverage and reducing computational load.
+\end{itemize}
+
+\subsection{Finite Difference Methods}
+
+\textbf{Finite Difference Methods} discretize the wave equation over a grid-aligned \textbf{mesh} by replacing partial derivatives with finite differences.
+This approach - briefly introduced in the first slideset on reverberation algorithms - allowsphysically grounded and flexible simulation of wave propagation.
+
+Among the main advantages of FDM is its nature as a \textbf{physical model}, which makes it applicable to complex scenarios and adaptable to various geometries.
+However, this \textbf{flexibility} comes at a high \textbf{computational cost}, which makes it overly expensive for large-scale or real-time applications.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{ciaoooo.png}
+    \caption{FDM for geometric reverberation}
+\end{figure}
+
+\subsection{Boundary Element Method}
+
+The \textbf{Boundary Element Method (BEM)}, like Finite Element (FEM) and Finite Difference Methods (FDM), is a numerical approach for \textbf{solving PDEs}.
+Unlike them, BEM discretizes an \textbf{integral form} of the PDE, reducing the problem dimensionality by one.
+This is because the integral equation is defined solely \textbf{on the boundary} of the domain and relates the boundary solution to values within the domain.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{bem.png}
+    \includegraphics[width=0.2\linewidth]{bem 2.png}
+    \caption{BEM for geometric reverberation}
+\end{figure}
+
+The Boundary Element Method applies only to specific types of partial differential equations, but when applicable, it is usually simpler and more efficient to implement than other methods. One of its main advantages is in problems involving infinite or very large domains. Since BEM relies on an integral formulation, all computations are restricted to the boundary of the domain, which is finite, making it particularly effective for \textbf{open-space acoustic simulations}.
+
+For instance, consider the following Laplace equation in the domain $D$ and boundary surface $\partial D = S$:
+
+\[
+\sum_{i=1}^N \frac{\partial^2 \varphi(\underline{p})}{\partial p_i^2} = 0 \quad \Rightarrow \quad \nabla^2 \varphi(\underline{p}) = 0, \qquad \underline{p} \in D
+\]
+
+This volumetric problem can be equivalently reformulated as an integral equation over the boundary:
+
+\[
+\int_S \frac{\partial G(\underline{p}, \underline{q})}{\partial \underline{\mathrm{n}}_q} \varphi(\underline{q}) \ dS_q + \frac{1}{2} \varphi(\underline{q}) = \int_S G(\underline{p}, \underline{q}) \frac{\partial \varphi(\underline{q})}{\partial \underline{\mathrm{n}}_q} \ dS_q
+\]
+
+The Green's function $G(\underline{p}, \underline{q})$ describes the effect observed at the point $\underline{p}$ due to a unit source located at the point $\underline{q}$.
+The derivative $\partial / \partial n_q$ is the partial derivative with respect to the outward normal vector $\underline{\mathrm{n}}$ at the boundary point \(\underline{q}\).
+
+The power of the formulation above lies in the fact that it relates the \textbf{potential} \(\varphi\) and its derivative on the \textbf{boundary} \(S\) alone: there is no reference of \(\varphi\) evaluated at points inside the domain $D$.
+In a typical boundary-value problem, we may have \(\varphi(\underline{q})\), \(\partial \varphi(\underline{q})/\partial \underline{\mathrm{n}}_q\) or a combination of those on \(S\).
+
+This formulation allows to solve the reverberation problem for boundary values without evaluating the full domain field.
+Its implementation involves \textbf{boundary surface discretization}, often as piecewise planar elements:
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{bem discrete.png}
+    \includegraphics[width=0.4\linewidth]{bem discrete 2.png}
+    \caption{Surface discretization for BEM}
+\end{figure}
+
+The Boundary Element Method is particularly well-suited for \textbf{low-frequency acoustic problems} - as it reduces the dimensionality of the problem by requiring computations only on the boundary - and offers a \textbf{simple formulation} compared to other numerical methods.
+
+On the other hand, each boundary element must store a complex function, increasing \textbf{memory requirement}.
+Accurate modelling of diffraction and specular reflection effects is essential: to ensure precision, we need \textbf{surface elements much smaller than the wavelength} of interest.
+These factors could make the method computationally demanding, especially at higher frequencies.
+
+\subsection{Image Source Method}
+
+The \textbf{Image Source Method (ISM)} is used to simulate \textbf{specular reflections} between sound source and receiver.
+It assumes that sound travels in straight lines (i.e. \textbf{rays}), moves at constant speed and its \textbf{energy decay} follows the inverse-square law: the energy decreases with \( 1/r^2 \), where \( r \) is the total distance the sound has travelled and the reflections follow \textbf{Snell's law}, meaning that the angle of reflection equals the angle of incidence.
+Reflections are modelled creating \textit{virtual sources} - called \textbf{image sources} - placed behind the reflective surfaces.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{mirror.png}
+    \caption{Image source method for geometric reverberation}
+\end{figure}
+
+Each \textbf{reflection order} in the ISM represents a level of mirroring: first-order reflections involve a single surface, while higher orders represent multiple reflections across different boundaries.
+The \textbf{Room Impulse Response (RIR)} is built by summing the contributions from all image sources, taking into account both \textbf{delay} and \textbf{attenuation} caused by each path.
+
+However, in \textbf{real environments} we do not find \textbf{perfect specular reflections}.
+As many reflections occur, \textbf{scattering effects} start to arise.
+According to Kuttruff, \textbf{early reflections} can be considered mostly \textbf{specular}, but \textbf{later reflections} tend to become \textbf{diffuse} due to surface irregularities and air absorption.
+For this reason, the Image Source Method is best suited for modelling early reflections.
+To accurately simulate late reverberation, we need additional models that account for diffuse energy buildup.
+
+\subsubsection{Audibility Check}
+
+In the Image Source Method, each \textbf{image source} is created by \textbf{reflecting the real source} across one or more surfaces.
+However, simply placing these image sources geometrically is not enough: we need to make an \textbf{audibility check}, where we check that the specular path from image source to receiver is actually valid.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{audibility.png}
+    \caption{Audibility check for a single reflection in ISM}
+\end{figure}
+
+For a \textbf{single reflection}, the process is the following: the real source $S$ is reflected over a surface (i.e. wall \( A \)), generating an image source \( S_A \), then we draw a line from receiver \( R \) to image source \( S_A \).
+If this line intersects wall \( A \), then \( S_A \) is considered a \textbf{valid image source}, meaning a specular reflection is physically possible.
+If the line misses the wall, the reflection is invalid and the image source is discarded.
+
+
+This principle extends to \textbf{higher-order reflections}.
+For example, in order to find the image source $S_{AB}$, we need to apply two reflections: the first reflection (for source $S$) over the surface $A$ allows to define the image source $S_A$, while the second reflection (for source $S_A$) over the surface $B$ allows to define the image source $S_{AB}$.
+Each reflection must pass the audibility check.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{aud check.png}
+    \caption{Audibility check for multiple reflections in ISM}
+\end{figure}
+
+In the left example:
+
+
+
+\[
+R \to S_{ab} \quad \text{must intersect } B \text{ at } B_{\text{int}}
+\]
+
+\[
+B_{\text{int}} \to S_{a} \quad \text{must intersect } A \text{ at } A_{\text{int}}
+\]
+
+\[
+A_{\text{int}} \to S \quad \text{must not intersect with any more geometry}
+\]
+
+\[
+\Rightarrow \; \text{The image source } S_{ab} \; \text{is audible.}
+\]
+
+While in the right example, since \(R \to S_{ba} \) does not intersect wall A, this image source is not audible.
+
+
+
+The \textbf{validation} of an image source requires a number of \textbf{intersection checks} equal to its \textbf{reflection order} - how many times the wave is reflected before it reaches the receiver.
+For example, a third-order image source must pass three intersection checks, while a fourth-order source requires four, and so on.
+This process ensures that the specular path from the image source to the receiver is physically valid.
+This validation procedure proceeds in reverse, starting from the receiver and tracing back to the image source. For this reason, it is referred to as \textbf{backtracking}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{asdfasdf.png}
+    \includegraphics[width=0.25\linewidth]{dis ism.png}
+    \caption{Backtracking in ISM}
+\end{figure}
+
+For a point \(\underline{\mathrm{p}}\), its reflection \(\underline{\mathrm{p}}'\) in a plane with unit normal vector \(\underline{\mathrm{n}}\) intersecting the point \(\underline{\mathrm{p}}_s\) can be found by:
+
+\[
+\underline{\mathrm{p}}' = \underline{\mathrm{p}} - 2 \underline{\mathrm{n}} \left( \underline{\mathrm{n}} \cdot (\underline{\mathrm{p}} - \underline{\mathrm{p}}_s) \right)
+\]
+
+When a surface is discretized using a \textbf{triangular mesh}, the surface normal \( \underline{\mathrm{n}} \) is computed taking the cross product of two edge vectors from the triangle.
+Each edge vector is the difference between the coordinates of two triangle vertices.
+The reference point \( t \) on the triangle's plane can be arbitrarily chosen as any of its vertices.
+
+One of the main \textbf{limitations} of ISM is that it models \textbf{specular reflections only}, neglecting any diffuse components of the sound field.
+Additionally, the \textbf{audibility check process} becomes increasingly expensive as the reflection order grows: the number of visibility checks grows exponentially, following a complexity of \( O(n^r) \), with \( n \) surfaces and order of reflection \( r \).
+
+
+The main \textbf{advantage} of ISM is very simple for \textbf{rectangular environments}, where it is possible to apply a grid in which each cell is considered a room.
+This approach allows to extend the audibility checks to the entire room.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{adv1.png}
+    \includegraphics[width=0.28\linewidth]{adv2.png}
+    \includegraphics[width=0.35\linewidth]{adv3.png}
+    \caption{Image Source Method for rectangular rooms}
+\end{figure}
+
+\subsection{Path Tracing}
+
+\textbf{Path tracing} is a technique that simulates acoustic propagation by \textbf{tracing rays from the source to the receiver}, accounting for all possible interactions with the environment.
+Unlike the image source method, it does not assume purely specular reflections and can therefore model more complex phenomena such as \textbf{scattering} and \textbf{diffuse reflections}.
+
+One of the main advantages of path tracing is its \textbf{generality}: it can handle any type of surface interaction and does not require explicit reflection orders to be defined.
+Additionally, its conceptual and computational structure is relatively \textbf{simple to implement}.
+
+However, this approach relies on stochastic sampling of possible propagation paths, so it is inherently subject to aliasing and \textbf{sampling errors}.
+The accuracy of the simulation strongly depends on the number of rays traced, as well as on the \textbf{spatial receiver configuration}. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\linewidth]{aaa.png}
+    \includegraphics[width=0.25\linewidth]{dis path.png}
+    \caption{Path tracing for geometric reverberation}
+\end{figure}
+
+\subsection{Beam Tracing}
+
+\textbf{Beam tracing} methods simulate sound propagation by recursively \textbf{tracing pyramidal beams} - each representing a \textbf{continuous set of rays} - originating from the source.
+At each intersection with a polygonal surface, new beams are generated: \textbf{reflection beams} are produced by mirroring the current beam across the surface, while \textbf{transmission beams} continue through transparent or partially transmissive materials.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\linewidth]{beam tracing.png}
+    \caption{Beam tracing for geometric reverberation}
+\end{figure}
+
+A major advantage of beam tracing is its \textbf{geometric coherence}: since each beam represents a continuous set of ray paths, it avoids the sampling noise typical of ray tracing and the overlap problems found in cone tracing.
+
+%This coherence also allows for progressive refinement and deterministic control over the propagation paths, making beam tracing suitable for \textbf{efficient pre-computations} in interactive applications.
+
+However, the geometric operations required are \textbf{computationally demanding}, especially in complex environments.
+As beams reflect, transmit or diffract, they must be \textbf{updated} recursively.
+To reduce the computational load, some implementations simplify beams to central rays and split them heuristically based on distance.
+
+An advanced technique called \textbf{polyhedral beam tracing} divides the space of sound rays into separate regions, where each region shows possible paths that sound could take - such as a certain sequence of reflections or diffractions.
+These regions are computed in advance and saved in a structure called \textbf{beam tree}, which keeps track of which parts of the environment are \textit{visible} from source to potential listeners.
+Later, during real-time interaction, the system can quickly look up which paths are valid by searching this tree.
+Once a valid path is found, the system simulates what the listener hears by \textbf{convolving} the original dry sound with the \textbf{impulse response} associated with that path - effectively adding the correct reverberation and spatial effects.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{poly beam.png}
+    \caption{Polyhedral beam tracing}
+\end{figure}
+
+This technique follows four precise and distinct steps:
+
+\begin{itemize}
+    \item \textbf{Spatial subdivision}: pre-compute the spatial relationships between polygons in the environment and store them in a \textit{cell adjacency graph}. This data structure allows for efficient traversal and visibility checks during the simulation.
+
+    \item \textbf{Beam tracing}: for each audio source, recursively trace beams representing transmission, diffraction and specular reflection. The result is a \textit{beam tree} data structure that encodes all reachable regions in space through valid acoustic paths.
+
+    \item \textbf{Path generation}: use the beam tree to compute \textit{valid propagation paths} from source to receiver. This step is updated in real-time to reflect changes in the receiver's position, enabling interactive control.
+
+    \item \textbf{Auralization phase}: generate a spatialized audio signal by convolving anechoic source signals with \textit{impulse responses} derived from the path data, including length, attenuation and direction. The audio is then synchronized with real-time graphics to deliver an immersive audiovisual experience.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\linewidth]{bt imp.png}
+    \caption{Beam tracing implementation for geometric reverberation}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{beam1.png}
+    \caption{Beam tracing implementation example}
+\end{figure}
+In the illustrated example, the source $S$ is located inside region $D$ of a rectangular environment subdivided into cells labeled $A$, $B$, $C$, $D$ and $E$. From $S$, an initial beam is launched through the opening $u$ towards region $E$. This generates a transmission beam $T_{uR_{o}}$, which continues through the aperture $o$. At this point the beam is reflected and transmitted again, producing the beams $T_{uR_{o}R_{p}}$ and $T_{uR_{o}R_{p}R_{p}}$, where the subscripts indicate the sequence of transmission ($T$) and reflection ($R$) operations at the corresponding apertures ($u$, $o$, $p$, etc.). As the beam propagates, it intersects region $C$ through boundary $t$, and subsequently passes into region $B$ through boundary $s$. The green regions in the floor plan represent the active beams as they are clipped and propagated through the openings.  
+
+The corresponding beam tree shows the recursive structure of this propagation. The root node is region $D$, from which a beam exits through opening $u$ into region $E$. From $E$, the beam is transmitted through $t$ into region $C$, and then through $s$ into region $B$. The sequence $D \rightarrow E \rightarrow C \rightarrow B$ is highlighted in blue in the tree, while other branches (in red) correspond to alternative beam interactions with other openings (labeled $k$, $l$, $m$, $n$, etc.). Each path from the root $D$ to a leaf node in the tree represents a valid propagation path of sound from the source $S$ through a sequence of reflections and transmissions across the environment.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{beam2.png}
+    \caption{Beam tracing implementation example}
+\end{figure}
+The figure illustrates the execution of the beam tracing algorithm in a cubicle-like environment. 
+In panel (a), the spatial subdivision is shown with the source $S$ and the receiver $R$, while the 
+walls are represented in pink. In panel (b), an example beam is traced from the source, undergoing 
+reflections and diffractions, and is highlighted in cyan because it contains the receiver. In panel (c), 
+the corresponding propagation path is reconstructed, indicating the sequence of interactions with 
+different types of surfaces: opaque faces (green), transparent faces (purple), and diffracting edges 
+(magenta). Finally, panel (d) shows the set of many valid propagation paths identified by the 
+algorithm, each corresponding to a distinct sequence of reflections, transmissions, and diffractions 
+connecting the source $S$ to the receiver $R$.
+
+\begin{tcolorbox}[colback=gray!5, colframe=black, title=\textbf{Summary of Geometric and Numerical Acoustic Modelling Techniques}]
+
+\begin{itemize}
+    \item \textbf{FEM/BEM}: best suited for \textit{low-frequency} simulations and precise wave-based modelling. BEM is particularly efficient for open or infinite domains.
+    
+    \item \textbf{Image Source Method}: most effective for modelling \textit{specular reflections} in rectangular rooms. It provides accurate early reflection modelling but becomes computationally expensive for high-order reflections.
+
+    \item \textbf{Path Tracing}: a stochastic method ideal for capturing \textit{high-order reflections} and \textit{diffuse energy}. Widely used in complex environments, though sensitive to receiver position and ray count.
+
+    \item \textbf{Beam Tracing}: a deterministic method that traces pyramidal beams through space. It is efficient when \textit{pre-computing for fixed sources}, but becomes slower when the source moves due to the need to rebuild the beam tree.
+
+    \item \textbf{Fast Beam Tracing (Visibility Lookup)}: an optimized version of beam tracing aimed at \textit{real-time sound field rendering}. Once the beam tree is computed, it allows fast updates of the sound field for dynamic receiver positions.
+\end{itemize}
+
+\end{tcolorbox}
+
+\subsection{Interactive Audio Spatialization}
+
+Interactive audio spatialization aims at predicting, in real time, how sound travels from a source to one or more receivers inside a geometrically complex scene. In the geometrical-acoustics approximation, sound energy is assumed to propagate along straight-line paths that obey the laws of geometric optics, namely specular reflection and transmission, with optional extensions to edge diffraction. This viewpoint leads to a path-tracing problem that appears both in auralization of architectural spaces and in radio-channel modeling for wireless systems affected by multipath fading.
+
+Beam tracing groups infinitely many nearby rays into a single polygonal/pyramidal beam and propagates it through the scene. At each surface hit (processed front-to-back), the beam is clipped to remove the shadowed part and spawns two children: a transmission beam and a reflection beam; repeating this yields a beam tree of candidate paths. Because beams cover continuous angular regions and are clipped consistently, it avoids both missed hits (ray-sampling artifacts) and overlap/double-counting (cone tracing). Paths to a receiver are then obtained by testing beam containment at the receiver and back-unfolding the associated sequence of surfaces.
+
+Classical beam tracing assumes that the source is fixed. Each time the source moves, the entire beam tree must be rebuilt because front-to-back order and occlusion patterns change with the viewpoint. This cost undermines interactivity and motivates a reformulation in which environment visibility is precomputed independently of the source. The idea is to describe, once and for all, which reflectors are mutually visible and under which viewing configurations; at run time the current source and receiver are combined with that database by simple lookups, and only lightweight beam clipping remains.
+
+%For this purpose the environment is characterized as follows. Sources and receivers are treated as point-like for geometric computation; directional directivity can be applied later as a weight. Each reflecting wall is represented by two oriented reflectors, one per face, each assigned a unique index and a local coordinate frame. During propagation, two key intermediate results are produced: beams, i.e. bundles of rays defined by their source (real or virtual) and the part of a reflector they illuminate; and active reflectors, i.e. the illuminated portions of a reflector that serve as apertures for generating the next beams.
+
+%The central precomputation is a visibility function. Given a viewpoint and a viewing direction (paramter space), this function returns the index of the first visible reflector along the corresponding ray, or a null value if the ray leaves the environment. Because walls are planar, the set of directions in which one wall starts to occlude another is bounded by straight lines in the parameter space. As a result, the visibility function is constant within each region (always the same first-hit wall), and it only changes abruptly across those linear occlusion boundaries. A specialized version is the visibility from a reflector, in which the viewpoint is constrained to lie on a particular reflector and the direction belongs to the reflecting half-space; this version is the one needed to propagate specular reflections. The environment’s visibility description is the collection of such functions for all oriented reflectors; with $M$ physical walls there are $2M$ oriented reflectors and thus $2M$ visibility functions.
+
+%To make the visibility function computable, one introduces a parameter space that encodes both the viewpoint and the viewing direction. If the viewpoint lies on a reflector, the dimensionality of this parameter space is reduced: in three dimensions it is four-dimensional, while in two dimensions it becomes two-dimensional. In the 2D case, the reflector can be normalized through an affine transformation, consisting of a rigid motion and a scaling, which maps the reflector segment to the canonical segment from $(0,-1)$ to $(0,1)$ with the reflecting surface oriented towards the half-plane $x \geq 0$. Once this normalization is applied, a viewing configuration is described by the line $y = ax + b$, where $a$ represents the slope of the direction and $b \in [-1,1]$ represents the location of the viewpoint along the normalized reflector. The parameter space of visibility for a reflector is therefore $(a,b)$.
+
+%The visibility region of a given reflector with respect to a reference reflector is then the subset of this parameter space $(a,b)$ for which the reflector is visible from points on the reference reflector. In other words, it corresponds to all combinations of $a$ and $b$ such that a ray starting at $(0,b)$ in the normalized frame and extending with slope $a$ first intersects the chosen reflector. Due to occlusions from other reflectors, this region may not be contiguous: it can be empty or consist of a collection of convex polygonal subsets. For a given reflector $i$, the visibility region is exactly the part of the parameter space where the visibility function takes the value $i$.
+
+%More concretely, a reflector segment in physical space can be described parametrically as $x = et + f$, $y = gt + h$ with $0 \leq t \leq 1$. Substituting this representation into the line equation $y = ax+b$ yields the condition $gt + h = a(et+f)+b$ that must be satisfied for some $t$ in $[0,1]$ and for $b \in [-1,1]$. The visibility region is therefore characterized as the set of pairs $(a,b)$ that satisfy these equations: geometrically it is the intersection between the beam footprint in parameter space and the strip defined by $-1 \leq b \leq 1$.
+
+%Several illustrative examples can be given. In simple cases the visibility region reduces to a trapezoidal or triangular polygon in the $(a,b)$ plane, bounded by the constraints on $t$ and $b$. In other cases, particularly when occlusions intervene, the visible area is reduced to smaller convex subsets or disappears entirely. The diagrams show typical situations in which the potential visibility regions are defined by linear boundaries in $(a,b)$ space, forming convex shapes associated with each reflector.
+
+%(from slide 38)
+
+
+\clearpage
