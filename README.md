@@ -1,4 +1,4 @@
-# [Room Acoustics - Module 1] – Open Knowledge Base
+# [Sound Analysis, Synthesis, and Processing] – Open Knowledge Base
 
 This repository is part of the community-driven knowledge base for the **MSc in Music and Acoustic Engineering – Politecnico di Milano**.
 Its goal is to **collect, preserve, and continuously improve** notes, summaries, and code for this specific course.
